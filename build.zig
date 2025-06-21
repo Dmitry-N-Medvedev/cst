@@ -46,5 +46,5 @@ pub fn build(b: *std.Build) void {
         std.debug.print("added build & test steps for {s}\n", .{entry.name});
     }
 
-    b.default_step = test_all;
+    b.default_step = build_all;
 }
