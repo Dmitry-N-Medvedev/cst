@@ -59,26 +59,29 @@ pub fn build(b: *std.Build) !void {
 
     // test
     const test_step = b.step("test", "run tests");
-    var test_dir = try std.fs.cwd().openDir("./", .{ .iterate = true });
-    defer test_dir.close();
 
-    var iter = test_dir.iterate();
+    const hdr_test_artifact = b.addTest(.{
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("hdr.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
+    });
+    const run_hdr_test = b.addRunArtifact(hdr_test_artifact);
+    run_hdr_test.setCwd(.{
+        .cwd_relative = ".",
+    });
+    run_hdr_test.step.name = "test hdr";
+    test_step.dependOn(&run_hdr_test.step);
 
-    while (try iter.next()) |entry| {
-        const is_zig_file = std.mem.eql(u8, entry.name, ".zig");
-        if (is_zig_file == false) continue;
-
-        const test_artifact = b.addTest(.{
-            .root_module = b.createModule(.{
-                .root_source_file = b.path(entry.name),
-                .target = target,
-                .optimize = optimize,
-            }),
-        });
-        const run_test = b.addRunArtifact(test_artifact);
-        run_test.step.name = b.fmt("test {s}\n", .{
-            std.fs.path.basename(entry.name),
-        });
-        test_step.dependOn(&run_test.step);
-    }
+    const hdr_parser_artifact = b.addTest(.{
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("hdr_parser.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
+    });
+    const run_hdr_parser_test = b.addRunArtifact(hdr_parser_artifact);
+    run_hdr_parser_test.step.name = "test hdr_parser";
+    test_step.dependOn(&run_hdr_parser_test.step);
 }
