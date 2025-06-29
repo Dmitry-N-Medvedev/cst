@@ -43,8 +43,12 @@ test "parseSingleLineSingleStringValue" {
 
             break;
         }
-        std.debug.print("{s}\n", .{@tagName(kv.key)});
-        std.debug.print("\texpected: '{s}'\n\tresolved: '{s}'\n", .{ kv.expected_value, resolved_value });
         try std.testing.expectEqualSlices(u8, kv.expected_value, resolved_value);
     }
+}
+
+test "parseSingleLineSingleStringValue: fail TokenError.KeyNotFoundError" {
+    const line = "UNKNOWN_TOKEN\t 'unknown value'";
+
+    try std.testing.expectError(TokenError.KeyNotFoundError, parseSingleLineSingleStringValue(@tagName(Token.FILE), line));
 }
