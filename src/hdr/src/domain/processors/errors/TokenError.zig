@@ -1,3 +1,3 @@
 pub const TokenError = error{
-    NotFound,
+    KeyNotFoundError,
 };
