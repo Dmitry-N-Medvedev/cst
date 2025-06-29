@@ -2,7 +2,7 @@ const std = @import("std");
 const Token = @import("../Token.zig").Token;
 const TokenError = @import("../processors/errors/TokenError.zig").TokenError;
 
-pub fn parseSingleLineSingleStringValue(key: []const u8, line: []const u8) ![]const u8 {
+pub inline fn parseSingleLineSingleStringValue(key: []const u8, line: []const u8) ![]const u8 {
     if (!std.mem.startsWith(u8, line, key)) {
         return TokenError.KeyNotFoundError;
     }
@@ -10,7 +10,7 @@ pub fn parseSingleLineSingleStringValue(key: []const u8, line: []const u8) ![]co
     return std.mem.trim(u8, line[key.len..], &[_]u8{ ' ', '\t', '\'' });
 }
 
-test "parseSingleLineSingleStringValue" {
+test "OK" {
     const KeyValue = struct {
         key: Token,
         value: []const u8,
@@ -47,7 +47,13 @@ test "parseSingleLineSingleStringValue" {
     }
 }
 
-test "parseSingleLineSingleStringValue: fail TokenError.KeyNotFoundError" {
+test "empty value" {
+    const resolved_value = try parseSingleLineSingleStringValue(@tagName(Token.FILE), @tagName(Token.FILE));
+
+    try std.testing.expectEqualStrings("", resolved_value);
+}
+
+test "fail TokenError.KeyNotFoundError" {
     const line = "UNKNOWN_TOKEN\t 'unknown value'";
 
     try std.testing.expectError(TokenError.KeyNotFoundError, parseSingleLineSingleStringValue(@tagName(Token.FILE), line));
