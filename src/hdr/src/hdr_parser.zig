@@ -31,24 +31,3 @@ fn parseHeaderBuffer(allocator: std.mem.Allocator, buffer: []const u8, header: *
 pub fn main() !void {
     std.debug.print("hdr parser\n", .{});
 }
-
-test {
-    _ = @import("domain/processors/processFILE.zig");
-    _ = @import("domain/processors/ProcessFn.zig");
-    _ = @import("domain/processors/errors/BufferError.zig");
-    _ = @import("domain/processors/errors/TokenError.zig");
-    _ = @import("domain/Header.zig");
-    _ = @import("domain/Token.zig");
-}
-
-// test "parseHeaderFile" {
-//     const allocator = std.testing.allocator;
-//     // const buffer: []const u8 = "FILE startup.$41";
-//     const buffer = "FILE\t startup.$41\r\n";
-//
-//     var header: Header = .{};
-//
-//     try parseHeaderBuffer(allocator, buffer, &header);
-//
-//     try std.testing.expect(true);
-// }
