@@ -2,7 +2,7 @@ const std = @import("std");
 const Token = @import("../Token.zig").Token;
 const TokenError = @import("../Token.zig").TokenError;
 
-pub inline fn parseSingleLineSingleStringValue(key: []const u8, line: []const u8) ![]const u8 {
+pub inline fn parseSingleLineSingleValueString(key: []const u8, line: []const u8) ![]const u8 {
     if (!std.mem.startsWith(u8, line, key)) {
         return TokenError.KeyNotFound;
     }
@@ -39,7 +39,7 @@ test "OK" {
 
         var resolved_value: []const u8 = undefined;
         while (lines.next()) |line| {
-            resolved_value = try parseSingleLineSingleStringValue(@tagName(kv.key), line);
+            resolved_value = try parseSingleLineSingleValueString(@tagName(kv.key), line);
 
             break;
         }
@@ -48,7 +48,7 @@ test "OK" {
 }
 
 test "empty value" {
-    const resolved_value = try parseSingleLineSingleStringValue(@tagName(Token.FILE), @tagName(Token.FILE));
+    const resolved_value = try parseSingleLineSingleValueString(@tagName(Token.FILE), @tagName(Token.FILE));
 
     try std.testing.expectEqualStrings("", resolved_value);
 }
@@ -56,5 +56,5 @@ test "empty value" {
 test "fail TokenError.KeyNotFoundError" {
     const line = "UNKNOWN_TOKEN\t 'unknown value'";
 
-    try std.testing.expectError(TokenError.KeyNotFound, parseSingleLineSingleStringValue(@tagName(Token.FILE), line));
+    try std.testing.expectError(TokenError.KeyNotFound, parseSingleLineSingleValueString(@tagName(Token.FILE), line));
 }
