@@ -1,5 +1,13 @@
 const std = @import("std");
 
+pub const TokenError = error{
+    // keys
+    KeyNotFound,
+
+    // values
+    EmptyValue,
+};
+
 pub const Token = enum {
     FILE,
     ACCESS,
@@ -22,8 +30,16 @@ pub const Token = enum {
     NVARS,
     ULOADS,
 
-    pub fn fromString(s: []const u8) ?Token {
+    pub fn from_string(s: []const u8) ?Token {
         return std.meta.stringToEnum(Token, s);
+    }
+};
+
+pub const TokenAccessValue = enum {
+    D,
+
+    pub fn from_string(s: []const u8) ?TokenAccessValue {
+        return std.meta.stringToEnum(TokenAccessValue, s);
     }
 };
 

@@ -1,10 +1,10 @@
 const std = @import("std");
 const Token = @import("../Token.zig").Token;
-const TokenError = @import("../processors/errors/TokenError.zig").TokenError;
+const TokenError = @import("../Token.zig").TokenError;
 
 pub inline fn parseSingleLineSingleStringValue(key: []const u8, line: []const u8) ![]const u8 {
     if (!std.mem.startsWith(u8, line, key)) {
-        return TokenError.KeyNotFoundError;
+        return TokenError.KeyNotFound;
     }
 
     return std.mem.trim(u8, line[key.len..], &[_]u8{ ' ', '\t', '\'' });
@@ -56,5 +56,5 @@ test "empty value" {
 test "fail TokenError.KeyNotFoundError" {
     const line = "UNKNOWN_TOKEN\t 'unknown value'";
 
-    try std.testing.expectError(TokenError.KeyNotFoundError, parseSingleLineSingleStringValue(@tagName(Token.FILE), line));
+    try std.testing.expectError(TokenError.KeyNotFound, parseSingleLineSingleStringValue(@tagName(Token.FILE), line));
 }
