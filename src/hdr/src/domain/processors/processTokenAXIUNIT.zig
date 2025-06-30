@@ -1,12 +1,12 @@
 const std = @import("std");
-const parseSingleLineSingleValueString = @import("../parsers/parseSingleLineSingleValueString.zig").parseSingleLineSingleValueString;
+const parseSingleLineSingleValue = @import("../parsers/parseSingleLineSingleValue.zig").parseSingleLineSingleValue;
 const Token = @import("../Token.zig").Token;
 const TokenError = @import("../Token.zig").TokenError;
 const AxiUnitValue = @import("../Token.zig").AxiUnitValue;
 const token = @tagName(Token.AXIUNIT);
 
 pub fn processTokenAXIUNIT(line: []const u8) !?AxiUnitValue {
-    const result = try parseSingleLineSingleValueString(token, line);
+    const result = try parseSingleLineSingleValue(token, line);
 
     if (result.len == 0) {
         return TokenError.EmptyValue;
