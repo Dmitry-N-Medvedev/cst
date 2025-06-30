@@ -39,6 +39,10 @@ pub const TokenFormValue = enum {
     F,
 };
 
+pub const AxiUnitValue = enum {
+    L,
+};
+
 pub const TokenOrder: [23]Token = .{
     .FILE,
     .ACCESS,
