@@ -1,19 +1,14 @@
 const std = @import("std");
-const TokenError = @import("../processors/errors/TokenError.zig").TokenError;
-const ValueError = @import("../processors/errors/ValueError.zig").ValueError;
+const TokenError = @import("../Token.zig").TokenError;
 const parseSingleLineSingleStringValue = @import("../parsers/parseSingleLineSingleStringValue.zig").parseSingleLineSingleStringValue;
 const FILE = @import("../Token.zig").Token.FILE;
 const token = @tagName(FILE);
 
 pub fn processTokenFILE(line: []const u8) ![]const u8 {
-    if (!std.mem.startsWith(u8, line, token)) {
-        return TokenError.KeyNotFoundError;
-    }
-
     const result = try parseSingleLineSingleStringValue(token, line);
 
     if (result.len == 0) {
-        return ValueError.Empty;
+        return TokenError.EmptyValue;
     }
 
     return result;
@@ -30,5 +25,5 @@ test "OK" {
 test "fail on empty value" {
     const line = @tagName(FILE);
 
-    try std.testing.expectError(ValueError.Empty, processTokenFILE(line));
+    try std.testing.expectError(TokenError.EmptyValue, processTokenFILE(line));
 }
