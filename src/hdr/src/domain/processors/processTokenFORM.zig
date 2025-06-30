@@ -1,12 +1,12 @@
 const std = @import("std");
-const parseSingleLineSingleValueString = @import("../parsers/parseSingleLineSingleValueString.zig").parseSingleLineSingleValueString;
+const parseSingleLineSingleValue = @import("../parsers/parseSingleLineSingleValue.zig").parseSingleLineSingleValue;
 const Token = @import("../Token.zig").Token;
 const TokenError = @import("../Token.zig").TokenError;
 const TokenFormValue = @import("../Token.zig").TokenFormValue;
 const token = @tagName(Token.FORM);
 
 pub fn processTokenFORM(line: []const u8) !?TokenFormValue {
-    const result = try parseSingleLineSingleValueString(token, line);
+    const result = try parseSingleLineSingleValue(token, line);
 
     if (result.len == 0) {
         return TokenError.EmptyValue;
