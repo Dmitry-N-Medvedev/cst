@@ -12,7 +12,7 @@ pub fn processTokenACCESS(line: []const u8) !?TokenAccessValue {
         return TokenError.EmptyValue;
     }
 
-    return TokenAccessValue.from_string(result);
+    return std.meta.stringToEnum(TokenAccessValue, result);
 }
 
 test "OK" {
