@@ -29,18 +29,14 @@ pub const Token = enum {
     STEP,
     NVARS,
     ULOADS,
-
-    pub fn from_string(s: []const u8) ?Token {
-        return std.meta.stringToEnum(Token, s);
-    }
 };
 
 pub const TokenAccessValue = enum {
     D,
+};
 
-    pub fn from_string(s: []const u8) ?TokenAccessValue {
-        return std.meta.stringToEnum(TokenAccessValue, s);
-    }
+pub const TokenFormValue = enum {
+    F,
 };
 
 pub const TokenOrder: [23]Token = .{
