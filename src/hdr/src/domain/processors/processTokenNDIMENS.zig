@@ -2,10 +2,9 @@ const std = @import("std");
 const parseSingleLineSingleValue = @import("../parsers/parseSingleLineSingleValue.zig").parseSingleLineSingleValue;
 const Token = @import("../Token.zig").Token;
 const TokenError = @import("../Token.zig").TokenError;
-const token = @tagName(Token.NDIMENS);
 
 pub fn processTokenNDIMENS(line: []const u8) !u8 {
-    const result = try parseSingleLineSingleValue(token, line);
+    const result = try parseSingleLineSingleValue(Token.NDIMENS, line);
 
     if (result.len == 0) {
         return TokenError.EmptyValue;

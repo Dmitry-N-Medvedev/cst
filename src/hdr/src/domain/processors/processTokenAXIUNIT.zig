@@ -3,10 +3,9 @@ const parseSingleLineSingleValue = @import("../parsers/parseSingleLineSingleValu
 const Token = @import("../Token.zig").Token;
 const TokenError = @import("../Token.zig").TokenError;
 const AxiUnitValue = @import("../Token.zig").AxiUnitValue;
-const token = @tagName(Token.AXIUNIT);
 
 pub fn processTokenAXIUNIT(line: []const u8) !?AxiUnitValue {
-    const result = try parseSingleLineSingleValue(token, line);
+    const result = try parseSingleLineSingleValue(Token.AXIUNIT, line);
 
     if (result.len == 0) {
         return TokenError.EmptyValue;

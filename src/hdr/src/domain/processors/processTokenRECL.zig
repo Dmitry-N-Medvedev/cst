@@ -2,10 +2,9 @@ const std = @import("std");
 const parseSingleLineSingleValue = @import("../parsers/parseSingleLineSingleValue.zig").parseSingleLineSingleValue;
 const Token = @import("../Token.zig").Token;
 const TokenError = @import("../Token.zig").TokenError;
-const token = @tagName(Token.RECL);
 
 pub fn processTokenRECL(line: []const u8) !u8 {
-    const result = try parseSingleLineSingleValue(token, line);
+    const result = try parseSingleLineSingleValue(Token.RECL, line);
 
     if (result.len == 0) {
         return TokenError.EmptyValue;
