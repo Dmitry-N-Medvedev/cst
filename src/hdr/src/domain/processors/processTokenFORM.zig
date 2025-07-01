@@ -3,10 +3,9 @@ const parseSingleLineSingleValue = @import("../parsers/parseSingleLineSingleValu
 const Token = @import("../Token.zig").Token;
 const TokenError = @import("../Token.zig").TokenError;
 const TokenFormValue = @import("../Token.zig").TokenFormValue;
-const token = @tagName(Token.FORM);
 
 pub fn processTokenFORM(line: []const u8) !?TokenFormValue {
-    const result = try parseSingleLineSingleValue(token, line);
+    const result = try parseSingleLineSingleValue(Token.FORM, line);
 
     if (result.len == 0) {
         return TokenError.EmptyValue;
