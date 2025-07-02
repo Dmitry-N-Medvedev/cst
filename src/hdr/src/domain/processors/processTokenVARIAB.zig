@@ -64,6 +64,4 @@ test "OK" {
         const expected_value = expected_item[start_idx..end_idx];
         try std.testing.expectEqualStrings(expected_value, result.items[i]);
     }
-
-    try std.testing.expect(true);
 }
