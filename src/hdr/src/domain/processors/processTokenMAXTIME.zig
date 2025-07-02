@@ -54,8 +54,6 @@ test "OK" {
     const s = try line.toOwnedSlice();
     defer allocator.free(s);
 
-    std.debug.print("s: {s}\n", .{s});
-
     const result = try processTokenMAXTIME(allocator, s);
     defer result.deinit();
 
