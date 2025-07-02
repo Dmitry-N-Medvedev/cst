@@ -3,8 +3,10 @@ const parseSingleLineSingleValue = @import("../parsers/parseSingleLineSingleValu
 const Token = @import("../Token.zig").Token;
 const TokenError = @import("../Token.zig").TokenError;
 
+const TOKEN = Token.AXISLAB;
+
 pub fn processTokenAXISLAB(line: []const u8) ![]const u8 {
-    const result = try parseSingleLineSingleValue(Token.AXISLAB, line);
+    const result = try parseSingleLineSingleValue(TOKEN, line);
 
     if (result.len == 0) {
         return TokenError.EmptyValue;
@@ -15,14 +17,14 @@ pub fn processTokenAXISLAB(line: []const u8) ![]const u8 {
 
 test "OK" {
     const expected_value = "Distance along blade";
-    const line = @tagName(Token.AXISLAB) ++ " \t  '" ++ expected_value ++ "'";
+    const line = @tagName(TOKEN) ++ " \t  '" ++ expected_value ++ "'";
     const actualTokenConfigValue = try processTokenAXISLAB(line);
 
     try std.testing.expectEqualSlices(u8, expected_value, actualTokenConfigValue);
 }
 
 test "fail on empty value" {
-    const line = @tagName(Token.AXISLAB);
+    const line = @tagName(TOKEN);
 
     try std.testing.expectError(TokenError.EmptyValue, processTokenAXISLAB(line));
 }

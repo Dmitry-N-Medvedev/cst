@@ -3,8 +3,10 @@ const parseSingleLineSingleValue = @import("../parsers/parseSingleLineSingleValu
 const Token = @import("../Token.zig").Token;
 const TokenError = @import("../Token.zig").TokenError;
 
+const TOKEN = Token.CONFIG;
+
 pub fn processTokenCONFIG(line: []const u8) ![]const u8 {
-    const result = try parseSingleLineSingleValue(Token.CONFIG, line);
+    const result = try parseSingleLineSingleValue(TOKEN, line);
 
     if (result.len == 0) {
         return TokenError.EmptyValue;
@@ -15,14 +17,14 @@ pub fn processTokenCONFIG(line: []const u8) ![]const u8 {
 
 test "OK" {
     const expected_value = "TRANSIENT";
-    const line = @tagName(Token.CONFIG) ++ " \t  '" ++ expected_value ++ "'";
+    const line = @tagName(TOKEN) ++ " \t  '" ++ expected_value ++ "'";
     const actualTokenConfigValue = try processTokenCONFIG(line);
 
     try std.testing.expectEqualSlices(u8, expected_value, actualTokenConfigValue);
 }
 
 test "fail on empty value" {
-    const line = @tagName(Token.CONFIG);
+    const line = @tagName(TOKEN);
 
     try std.testing.expectError(TokenError.EmptyValue, processTokenCONFIG(line));
 }

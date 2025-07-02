@@ -4,8 +4,10 @@ const TokenVarUnitValue = @import("../Token.zig").TokenVarUnitValue;
 const TokenError = @import("../Token.zig").TokenError;
 const parseSingleLineMultiValue = @import("../parsers/parseSingleLineMultiValue.zig").parseSingleLineMultiValue;
 
+const TOKEN = Token.AXIVAL;
+
 pub fn processTokenAXIVAL(allocator: std.mem.Allocator, line: []const u8) !std.ArrayList(f64) {
-    const array = try parseSingleLineMultiValue(allocator, Token.AXIVAL, line);
+    const array = try parseSingleLineMultiValue(allocator, TOKEN, line);
     defer array.deinit();
 
     var result = try std.ArrayList(f64).initCapacity(allocator, array.items.len);
@@ -74,7 +76,7 @@ test "OK" {
     var line = std.ArrayList(u8).init(allocator);
     defer line.deinit();
 
-    try line.appendSlice(@tagName(Token.AXIVAL));
+    try line.appendSlice(@tagName(TOKEN));
     try line.append('\t');
     try line.append(' ');
 
@@ -103,7 +105,7 @@ test "OK" {
 test "fail on unknown TokenVarUnitValue" {
     const allocator = std.testing.allocator;
     var line = std.ArrayList(u8).init(allocator);
-    try line.appendSlice(@tagName(Token.AXIVAL));
+    try line.appendSlice(@tagName(TOKEN));
     try line.append('\t');
     try line.append(' ');
     try line.append('Z');
@@ -117,7 +119,7 @@ test "fail on unknown TokenVarUnitValue" {
 test "fail on empty value" {
     const allocator = std.testing.allocator;
     var line = std.ArrayList(u8).init(allocator);
-    try line.appendSlice(@tagName(Token.AXIVAL));
+    try line.appendSlice(@tagName(TOKEN));
     try line.append('\t');
     try line.append(' ');
 

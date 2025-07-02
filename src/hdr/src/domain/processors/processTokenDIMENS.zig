@@ -3,13 +3,15 @@ const Token = @import("../Token.zig").Token;
 const TokenError = @import("../Token.zig").TokenError;
 const parseSingleLineMultiValue = @import("../parsers/parseSingleLineMultiValue.zig").parseSingleLineMultiValue;
 
+const TOKEN = Token.DIMENS;
+
 pub const Dimensions = struct {
     TimeSeriesLength: u16 = 6001,
     VARIAB: u8 = 0,
     AXIVAL: u8 = 0,
 };
 pub fn processTokenDIMENS(allocator: std.mem.Allocator, line: []const u8) !Dimensions {
-    const array = try parseSingleLineMultiValue(allocator, Token.DIMENS, line);
+    const array = try parseSingleLineMultiValue(allocator, TOKEN, line);
     defer array.deinit();
 
     const result: Dimensions = .{
@@ -23,7 +25,7 @@ pub fn processTokenDIMENS(allocator: std.mem.Allocator, line: []const u8) !Dimen
 
 test "OK" {
     const allocator = std.testing.allocator;
-    const line: []const u8 = @tagName(Token.DIMENS) ++ "\t 8 44 6001";
+    const line: []const u8 = @tagName(TOKEN) ++ "\t 8 44 6001";
     const dimensions: Dimensions = try processTokenDIMENS(allocator, line);
 
     try std.testing.expectEqual(8, dimensions.VARIAB);

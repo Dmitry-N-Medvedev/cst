@@ -3,8 +3,10 @@ const Token = @import("../Token.zig").Token;
 const TokenError = @import("../Token.zig").TokenError;
 const parseSingleLineMultiValue = @import("../parsers/parseSingleLineMultiValue.zig").parseSingleLineMultiValue;
 
+const TOKEN = Token.VARIAB;
+
 pub fn processTokenVARIAB(allocator: std.mem.Allocator, line: []const u8) !std.ArrayList([]const u8) {
-    const array = try parseSingleLineMultiValue(allocator, Token.VARIAB, line);
+    const array = try parseSingleLineMultiValue(allocator, TOKEN, line);
 
     return array;
 }
@@ -27,7 +29,7 @@ test "OK" {
     var line = std.ArrayList(u8).init(allocator);
     defer line.deinit();
 
-    try line.appendSlice(@tagName(Token.VARIAB));
+    try line.appendSlice(@tagName(TOKEN));
     try line.append('\t');
     try line.append(' ');
 
