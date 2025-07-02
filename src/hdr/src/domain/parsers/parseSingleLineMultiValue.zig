@@ -10,7 +10,15 @@ pub inline fn parseSingleLineMultiValue(allocator: std.mem.Allocator, token: Tok
     var result = std.ArrayList([]const u8).init(allocator);
     errdefer result.deinit();
 
-    var entries = std.mem.tokenizeAny(u8, line[@tagName(token).len..], &[_]u8{' '});
+    var split_char: u8 = undefined;
+
+    if (std.mem.lastIndexOfScalar(u8, line[@tagName(token).len..], '\'') != null) {
+        split_char = '\'';
+    } else {
+        split_char = ' ';
+    }
+
+    var entries = std.mem.tokenizeAny(u8, line[@tagName(token).len..], &[_]u8{split_char});
     while (entries.next()) |entry| {
         const item = std.mem.trim(u8, entry, &[_]u8{ '\t', ' ' });
         if (item.len == 0) {
