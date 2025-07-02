@@ -6,6 +6,7 @@ pub const TokenError = error{
 
     // values
     EmptyValue,
+    UnknownValue,
 };
 
 pub const Token = enum {
@@ -39,8 +40,14 @@ pub const TokenFormValue = enum {
     F,
 };
 
+// TODO: inconsistent name of the enum. Must be TokenAxiUnitValue
 pub const AxiUnitValue = enum {
     L,
+};
+
+pub const TokenVarUnitValue = enum {
+    F,
+    FL,
 };
 
 pub const TokenOrder: [23]Token = .{
