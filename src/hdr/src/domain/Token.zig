@@ -31,6 +31,7 @@ pub const Token = enum {
     STEP,
     NVARS,
     ULOADS,
+    MAXTIME,
 };
 
 pub const TokenAccessValue = enum {
