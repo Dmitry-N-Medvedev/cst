@@ -4,8 +4,10 @@ const TokenVarUnitValue = @import("../Token.zig").TokenVarUnitValue;
 const TokenError = @import("../Token.zig").TokenError;
 const parseSingleLineMultiValue = @import("../parsers/parseSingleLineMultiValue.zig").parseSingleLineMultiValue;
 
+const TOKEN = Token.MINTIME;
+
 pub fn processTokenMINTIME(allocator: std.mem.Allocator, line: []const u8) !std.ArrayList(f64) {
-    const array = try parseSingleLineMultiValue(allocator, Token.MINTIME, line);
+    const array = try parseSingleLineMultiValue(allocator, TOKEN, line);
     defer array.deinit();
 
     var result = try std.ArrayList(f64).initCapacity(allocator, array.items.len);
@@ -26,8 +28,6 @@ test "OK" {
     var expected_values = std.ArrayList(f64).init(allocator);
     defer expected_values.deinit();
 
-    try expected_values.append(2.2870000E+02);
-
     try expected_values.append(9.9250001E+01);
     try expected_values.append(9.3550001E+01);
     try expected_values.append(1.1235000E+02);
@@ -40,7 +40,7 @@ test "OK" {
     var line = std.ArrayList(u8).init(allocator);
     defer line.deinit();
 
-    try line.appendSlice(@tagName(Token.MINTIME));
+    try line.appendSlice(@tagName(TOKEN));
     try line.append('\t');
     try line.append(' ');
 
@@ -69,7 +69,7 @@ test "OK" {
 test "fail on TokenError.InvalidTypeValue" {
     const allocator = std.testing.allocator;
     var line = std.ArrayList(u8).init(allocator);
-    try line.appendSlice(@tagName(Token.MINTIME));
+    try line.appendSlice(@tagName(TOKEN));
     try line.append('\t');
     try line.append(' ');
     try line.append('Z');
@@ -83,7 +83,7 @@ test "fail on TokenError.InvalidTypeValue" {
 test "fail on empty value" {
     const allocator = std.testing.allocator;
     var line = std.ArrayList(u8).init(allocator);
-    try line.appendSlice(@tagName(Token.MINTIME));
+    try line.appendSlice(@tagName(TOKEN));
     try line.append('\t');
     try line.append(' ');
 

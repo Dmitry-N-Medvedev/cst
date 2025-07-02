@@ -3,8 +3,10 @@ const parseSingleLineSingleValue = @import("../parsers/parseSingleLineSingleValu
 const Token = @import("../Token.zig").Token;
 const TokenError = @import("../Token.zig").TokenError;
 
+const TOKEN = Token.GENLAB;
+
 pub fn processTokenGENLAB(line: []const u8) ![]const u8 {
-    const result = try parseSingleLineSingleValue(Token.GENLAB, line);
+    const result = try parseSingleLineSingleValue(TOKEN, line);
 
     if (result.len == 0) {
         return TokenError.EmptyValue;
@@ -15,14 +17,14 @@ pub fn processTokenGENLAB(line: []const u8) ![]const u8 {
 
 test "OK" {
     const expected_value = "Blade 1 Loads: Root axes";
-    const line = @tagName(Token.GENLAB) ++ " \t  '" ++ expected_value ++ "'";
+    const line = @tagName(TOKEN) ++ " \t  '" ++ expected_value ++ "'";
     const actualTokenConfigValue = try processTokenGENLAB(line);
 
     try std.testing.expectEqualSlices(u8, expected_value, actualTokenConfigValue);
 }
 
 test "fail on empty value" {
-    const line = @tagName(Token.GENLAB);
+    const line = @tagName(TOKEN);
 
     try std.testing.expectError(TokenError.EmptyValue, processTokenGENLAB(line));
 }

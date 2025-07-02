@@ -3,8 +3,10 @@ const parseSingleLineSingleValue = @import("../parsers/parseSingleLineSingleValu
 const Token = @import("../Token.zig").Token;
 const TokenError = @import("../Token.zig").TokenError;
 
+const TOKEN = Token.STEP;
+
 pub fn processTokenSTEP(line: []const u8) !f64 {
-    const result = try parseSingleLineSingleValue(Token.STEP, line);
+    const result = try parseSingleLineSingleValue(TOKEN, line);
 
     if (result.len == 0) {
         return TokenError.EmptyValue;
@@ -16,14 +18,14 @@ pub fn processTokenSTEP(line: []const u8) !f64 {
 test "OK" {
     const expected_value: f64 = 5.0000001E-02;
     var buff: [128]u8 = undefined;
-    const line = try std.fmt.bufPrint(&buff, "{s} \t {}", .{ @tagName(Token.STEP), expected_value });
+    const line = try std.fmt.bufPrint(&buff, "{s} \t {}", .{ @tagName(TOKEN), expected_value });
     const actualTokenReclValue = try processTokenSTEP(line);
 
     try std.testing.expectEqual(expected_value, actualTokenReclValue);
 }
 
 test "fail on empty value" {
-    const line = @tagName(Token.STEP);
+    const line = @tagName(TOKEN);
 
     try std.testing.expectError(TokenError.EmptyValue, processTokenSTEP(line));
 }

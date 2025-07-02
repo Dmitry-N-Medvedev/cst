@@ -4,8 +4,10 @@ const TokenVarUnitValue = @import("../Token.zig").TokenVarUnitValue;
 const TokenError = @import("../Token.zig").TokenError;
 const parseSingleLineMultiValue = @import("../parsers/parseSingleLineMultiValue.zig").parseSingleLineMultiValue;
 
+const TOKEN = Token.VARUNIT;
+
 pub fn processTokenVARUNIT(allocator: std.mem.Allocator, line: []const u8) !std.ArrayList(TokenVarUnitValue) {
-    const array = try parseSingleLineMultiValue(allocator, Token.VARUNIT, line);
+    const array = try parseSingleLineMultiValue(allocator, TOKEN, line);
     defer array.deinit();
 
     var result = try std.ArrayList(TokenVarUnitValue).initCapacity(allocator, array.items.len);
@@ -37,7 +39,7 @@ test "OK" {
     var line = std.ArrayList(u8).init(allocator);
     defer line.deinit();
 
-    try line.appendSlice(@tagName(Token.VARUNIT));
+    try line.appendSlice(@tagName(TOKEN));
     try line.append('\t');
     try line.append(' ');
 
@@ -73,7 +75,7 @@ test "fail on unknown TokenVarUnitValue" {
     try expected_values.append("Z");
 
     var line = std.ArrayList(u8).init(allocator);
-    try line.appendSlice(@tagName(Token.VARUNIT));
+    try line.appendSlice(@tagName(TOKEN));
     try line.append('\t');
     try line.append(' ');
     try line.append('Z');

@@ -4,8 +4,10 @@ const Token = @import("../Token.zig").Token;
 const TokenError = @import("../Token.zig").TokenError;
 const TokenFormValue = @import("../Token.zig").TokenFormValue;
 
+const TOKEN = Token.FORM;
+
 pub fn processTokenFORM(line: []const u8) !?TokenFormValue {
-    const result = try parseSingleLineSingleValue(Token.FORM, line);
+    const result = try parseSingleLineSingleValue(TOKEN, line);
 
     if (result.len == 0) {
         return TokenError.EmptyValue;
@@ -15,14 +17,14 @@ pub fn processTokenFORM(line: []const u8) !?TokenFormValue {
 }
 
 test "OK" {
-    const line = @tagName(Token.FORM) ++ " \t  " ++ @tagName(TokenFormValue.F);
+    const line = @tagName(TOKEN) ++ " \t  " ++ @tagName(TokenFormValue.F);
     const actualTokenFormValue = try processTokenFORM(line);
 
     try std.testing.expectEqual(TokenFormValue.F, actualTokenFormValue);
 }
 
 test "fail on empty value" {
-    const line = @tagName(Token.FORM);
+    const line = @tagName(TOKEN);
 
     try std.testing.expectError(TokenError.EmptyValue, processTokenFORM(line));
 }

@@ -4,8 +4,10 @@ const Token = @import("../Token.zig").Token;
 const TokenError = @import("../Token.zig").TokenError;
 const AxiUnitValue = @import("../Token.zig").AxiUnitValue;
 
+const TOKEN = Token.AXIUNIT;
+
 pub fn processTokenAXIUNIT(line: []const u8) !?AxiUnitValue {
-    const result = try parseSingleLineSingleValue(Token.AXIUNIT, line);
+    const result = try parseSingleLineSingleValue(TOKEN, line);
 
     if (result.len == 0) {
         return TokenError.EmptyValue;
@@ -15,14 +17,14 @@ pub fn processTokenAXIUNIT(line: []const u8) !?AxiUnitValue {
 }
 
 test "OK" {
-    const line = @tagName(Token.AXIUNIT) ++ " \t  " ++ @tagName(AxiUnitValue.L);
+    const line = @tagName(TOKEN) ++ " \t  " ++ @tagName(AxiUnitValue.L);
     const actualTokenAxiUnitValue = try processTokenAXIUNIT(line);
 
     try std.testing.expectEqual(AxiUnitValue.L, actualTokenAxiUnitValue);
 }
 
 test "fail on empty value" {
-    const line = @tagName(Token.AXIUNIT);
+    const line = @tagName(TOKEN);
 
     try std.testing.expectError(TokenError.EmptyValue, processTokenAXIUNIT(line));
 }
