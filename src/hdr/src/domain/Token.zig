@@ -7,6 +7,7 @@ pub const TokenError = error{
     // values
     EmptyValue,
     UnknownValue,
+    InvalidTypeValue,
 };
 
 pub const Token = enum {
