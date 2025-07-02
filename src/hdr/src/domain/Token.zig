@@ -33,6 +33,7 @@ pub const Token = enum {
     ULOADS,
     MAXTIME,
     MINTIME,
+    MEAN,
 };
 
 pub const TokenAccessValue = enum {
