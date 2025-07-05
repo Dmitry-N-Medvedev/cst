@@ -45,13 +45,21 @@ pub const TokenFormValue = enum {
 };
 
 // TODO: inconsistent name of the enum. Must be TokenAxiUnitValue
-pub const AxiUnitValue = enum {
+pub const TokenAxiUnitValue = enum {
     L,
 };
 
 pub const TokenVarUnitValue = enum {
     F,
     FL,
+};
+
+pub const TokenAxisLabValue = enum {
+    @"Distance from hub center",
+    Time,
+    @"Distance along blade",
+    @"Tower height",
+    @"Tower station height",
 };
 
 pub const TokenOrder: [23]Token = .{

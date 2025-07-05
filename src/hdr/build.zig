@@ -8,10 +8,20 @@ pub fn build(b: *std.Build) !void {
     const hdr_parser_root_file = b.path("src/hdr_parser.zig");
 
     // hdr_parser
+    const fsm = b.dependency("zigfsm", .{
+        .target = target,
+        .optimize = optimize,
+    });
     const hdr_parser_mod = b.createModule(.{
         .root_source_file = hdr_parser_root_file,
         .target = target,
         .optimize = optimize,
+        .imports = &.{
+            .{
+                .name = "zigfsm",
+                .module = fsm.module("zigfsm"),
+            },
+        },
     });
     const hdr_parser = b.addExecutable(.{
         .name = "hdr_parser",
