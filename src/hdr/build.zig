@@ -1,5 +1,4 @@
 const std = @import("std");
-const addTests = @import("utils").addTests;
 
 pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
@@ -8,10 +7,20 @@ pub fn build(b: *std.Build) !void {
     const hdr_parser_root_file = b.path("src/hdr_parser.zig");
 
     // hdr_parser
+    const fsm = b.dependency("zigfsm", .{
+        .target = target,
+        .optimize = optimize,
+    });
     const hdr_parser_mod = b.createModule(.{
         .root_source_file = hdr_parser_root_file,
         .target = target,
         .optimize = optimize,
+        .imports = &.{
+            .{
+                .name = "zigfsm",
+                .module = fsm.module("zigfsm"),
+            },
+        },
     });
     const hdr_parser = b.addExecutable(.{
         .name = "hdr_parser",
@@ -39,6 +48,8 @@ pub fn build(b: *std.Build) !void {
         .target = target,
         .optimize = optimize,
     });
+    hdr_parser_test.root_module.addImport("zigfsm", fsm.module("zigfsm"));
+
     const run_hdr_parser_test = b.addRunArtifact(hdr_parser_test);
     run_hdr_parser_test.step.name = "test hdr_parser";
     test_step.dependOn(&run_hdr_parser_test.step);

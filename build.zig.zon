@@ -8,8 +8,9 @@
         "src",
     },
     .dependencies = .{
-        .utils = .{
-            .path = "utils",
+        .zigfsm = .{
+            .url = "https://github.com/cryptocode/zigfsm/archive/refs/tags/zig-0.14.tar.gz",
+            .hash = "zigfsm-0.2.0-9VW4uQg6AQAcTd7RfXEViPD8vFCo1VO6PpbdKxE8J3oG",
         },
     },
 }

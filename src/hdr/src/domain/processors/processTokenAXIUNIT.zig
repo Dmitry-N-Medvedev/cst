@@ -2,7 +2,7 @@ const std = @import("std");
 const parseSingleLineSingleValue = @import("../parsers/parseSingleLineSingleValue.zig").parseSingleLineSingleValue;
 const Token = @import("../Token.zig").Token;
 const TokenError = @import("../Token.zig").TokenError;
-const AxiUnitValue = @import("../Token.zig").AxiUnitValue;
+const AxiUnitValue = @import("../Token.zig").TokenAxiUnitValue;
 
 const TOKEN = Token.AXIUNIT;
 
