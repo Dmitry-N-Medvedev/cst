@@ -1,5 +1,4 @@
 const std = @import("std");
-const addTests = @import("utils").addTests;
 
 pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
@@ -49,6 +48,8 @@ pub fn build(b: *std.Build) !void {
         .target = target,
         .optimize = optimize,
     });
+    hdr_parser_test.root_module.addImport("zigfsm", fsm.module("zigfsm"));
+
     const run_hdr_parser_test = b.addRunArtifact(hdr_parser_test);
     run_hdr_parser_test.step.name = "test hdr_parser";
     test_step.dependOn(&run_hdr_parser_test.step);
