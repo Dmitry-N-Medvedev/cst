@@ -84,30 +84,30 @@ pub const GENERATED_MATRIX = blk: {
     break :blk slice_storage;
 };
 
-pub const GENERATED_LENGTHS: []const u8 = blk: {
+pub const GENERATED_LENGTHS: []const usize = blk: {
     const all = std.enums.values(Token);
     var seen = std.StaticBitSet(256).initEmpty();
-    var buf: [all.len]u8 = undefined;
+    var buf: [all.len]usize = undefined;
     var count: usize = 0;
     for (all) |t| {
-        const len: u8 = @intCast(@tagName(t).len);
+        const len: usize = @intCast(@tagName(t).len);
         if (!seen.isSet(len)) {
             seen.set(len);
             buf[count] = len;
             count += 1;
         }
     }
-    const final: [count]u8 = buf[0..count].*;
+    const final: [count]usize = buf[0..count].*;
     break :blk &final;
 };
 
 pub const TokenTable = struct {
-    comptime lengths: []const u8 = GENERATED_LENGTHS,
+    comptime lengths: []const usize = GENERATED_LENGTHS,
     comptime tokens_by_length: [GENERATED_MATRIX.len][]const Token = GENERATED_MATRIX,
 
     const Self = @This();
 
-    pub fn getByLen(self: TokenTable, len: u8) []const Token {
+    pub fn getByLen(self: TokenTable, len: usize) []const Token {
         if (len < self.tokens_by_length.len) {
             return self.tokens_by_length[len];
         }
@@ -115,15 +115,36 @@ pub const TokenTable = struct {
     }
 };
 
-test "TokenTable" {
+test "find Token" {
     const tt = TokenTable{};
+    const input = "FILE\t startup.$41\r\n";
+    const whitespace = " \t\r\n";
+    const next_space_pos = std.mem.indexOfAny(u8, input, whitespace).?;
 
-    for (tt.lengths) |l| {
-        const tokens = tt.getByLen(l);
+    const TimeMeasurementReport = struct {
+        getByLen: u64 = undefined,
+        tokenResolveLoop: u64 = undefined,
+    };
 
-        for (tokens) |t| {
-            try std.testing.expectEqual(l, @tagName(t).len);
-            std.debug.print("{any} {d}\n", .{ t, l });
+    var timer = try std.time.Timer.start();
+    const tokens = tt.getByLen(next_space_pos);
+    var measurementReport: TimeMeasurementReport = TimeMeasurementReport{};
+    measurementReport.getByLen = timer.read();
+
+    timer.reset();
+    for (tokens) |t| {
+        if (std.mem.startsWith(u8, input, @tagName(t))) {
+            measurementReport.tokenResolveLoop = timer.read();
+            std.debug.print("token: {any}\n", .{t});
+            break;
         }
     }
+
+    const timeer_report =
+        \\ get: {d} ns
+        \\ for: {d} ns
+    ;
+    const r = try std.fmt.allocPrint(std.testing.allocator, timeer_report, .{ measurementReport.getByLen, measurementReport.tokenResolveLoop });
+    defer std.testing.allocator.free(r);
+    std.debug.print("time measurements:\n{s}\n", .{r});
 }

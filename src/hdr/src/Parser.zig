@@ -1,6 +1,7 @@
 const std = @import("std");
 const zigfsm = @import("zigfsm");
 const Token = @import("domain/Token.zig").Token;
+const TokenTable = @import("domain/Token.zig").TokenTable;
 const TokenOrder = @import("domain/Token.zig").TokenOrder;
 const TokenAccessValue = @import("domain/Token.zig").TokenAccessValue;
 const TokenFormValue = @import("domain/Token.zig").TokenFormValue;
@@ -194,12 +195,16 @@ const Parser = struct {
     }
 
     fn resolveToken(input: []const u8, input_idx: *usize) ?Token {
-        var foundToken: Token = undefined;
+        const tokenFound: Token = undefined;
         //
         const whitespace = " \t\r\n";
         const next_space_pos = std.mem.indexOfAny(u8, input, whitespace).?;
         std.debug.print("next_space_pos: {d}\n", .{next_space_pos});
-        //
+        // //
+        // const tt: TokenTable = TokenTable{};
+        // const nextPos = input_idx.* + next_space_pos;
+        // const heystack = input[input_idx.*..nextPos];
+
         for (TokenOrder) |token| {
             const tokenString = @tagName(token);
             const nextPos = input_idx.* + tokenString.len;
@@ -214,13 +219,13 @@ const Parser = struct {
             if (std.mem.eql(u8, tokenString, input[input_idx.*..nextPos])) {
                 std.debug.print("found '{any}'\t[{d}..{d}]\n", .{ token, input_idx.*, nextPos - 1 });
                 input_idx.* = nextPos;
-                foundToken = token;
+                tokenFound = token;
 
                 break;
             }
         }
-
-        return foundToken;
+        //
+        return tokenFound;
     }
 
     pub fn onTransition(handler: *FSM.Handler, event: ?Event, from: State, to: State) zigfsm.HandlerResult {
