@@ -365,8 +365,12 @@ const Parser = struct {
                 _ = parseSingleLineStingleStringValue(self.input, &self.input_idx, self.default_EOL) catch unreachable;
             },
             State.ULOADS => {
-                const uloadsValue = parseMultiLineMultiValue(self.allocator, self.input, &self.input_idx, self.default_EOL) catch unreachable;
-                std.debug.print("ULOAD:\n{any}\n", .{uloadsValue});
+                const uloadsValues = parseMultiLineMultiValue(self.allocator, self.input, &self.input_idx, @tagName(Token.MAXTIME)) catch unreachable;
+                std.debug.print("ULOAD:\n", .{});
+                for (uloadsValues) |uloadsValue| {
+                    std.debug.print("{s} ", .{uloadsValue});
+                }
+                std.debug.print("\n", .{});
             },
             State.MAXTIME => {
                 _ = parseSingleLineStingleStringValue(self.input, &self.input_idx, self.default_EOL) catch unreachable;
@@ -463,26 +467,26 @@ const Parser = struct {
     }
 };
 
-// test "OK" {
-//     const allocator = std.testing.allocator;
-//     const specs = try std.fs.cwd().openFile("src/.data/startup.%41", .{ .mode = .read_only });
-//     defer specs.close();
-//
-//     const contents = try specs.readToEndAlloc(allocator, std.math.maxInt(usize));
-//     defer allocator.free(contents);
-//     std.debug.print("contents.len: {d}\n", .{contents.len});
-//
-//     var result: Result = try Result.init(allocator);
-//     defer result.deinit();
-//
-//     var fsm = FSM.init();
-//     try Parser.parse(&fsm, contents, &result);
-//
-//     try Parser.printResult(allocator, &result);
-//
-//     // const fileName = try result.FILE.toOwnedSlice();
-//     // defer allocator.free(fileName);
-//
-//     // try std.testing.expectEqualStrings("startup.$41", fileName);
-//     try std.testing.expect(true);
-// }
+test "OK" {
+    const allocator = std.testing.allocator;
+    const specs = try std.fs.cwd().openFile("src/.data/startup.%41", .{ .mode = .read_only });
+    defer specs.close();
+
+    const contents = try specs.readToEndAlloc(allocator, std.math.maxInt(usize));
+    defer allocator.free(contents);
+    std.debug.print("contents.len: {d}\n", .{contents.len});
+
+    var result: Result = try Result.init(allocator);
+    defer result.deinit();
+
+    var fsm = FSM.init();
+    try Parser.parse(&fsm, contents, &result);
+
+    try Parser.printResult(allocator, &result);
+
+    // const fileName = try result.FILE.toOwnedSlice();
+    // defer allocator.free(fileName);
+
+    // try std.testing.expectEqualStrings("startup.$41", fileName);
+    try std.testing.expect(true);
+}

@@ -4,10 +4,8 @@ const EOL = @import("EOL.zig").EOL;
 const Token = @import("../domain/Token.zig").Token;
 const Whitespace = @import("WhiteSpace.zig").Whitespace;
 
-const MAXTIME = @tagName(Token.MAXTIME);
-
-pub inline fn parseMultiLineMultiValue(allocator: std.mem.Allocator, input: []const u8, pos: *usize) ParseError![]const []const u8 {
-    const maxtime_pos = std.mem.indexOf(u8, input[pos.*..], MAXTIME) orelse unreachable;
+pub inline fn parseMultiLineMultiValue(allocator: std.mem.Allocator, input: []const u8, pos: *usize, stop: []const u8) ParseError![]const []const u8 {
+    const maxtime_pos = std.mem.indexOf(u8, input[pos.*..], stop) orelse unreachable;
     const value_slice = input[pos.*..maxtime_pos];
     var values = std.mem.splitAny(u8, value_slice, Whitespace);
 
@@ -49,25 +47,15 @@ test "parseMultiLineMultiValue::OK" {
         \\ -6.8082086E+04   4.6224588E+05   4.6723272E+05  -9.4548401E+02   1.1765028E+04   2.4370433E+02   1.1767552E+04  -2.5173898E+05
         \\ MAXTIME   2.2870000E+02   0.0000000E+00   2.2880000E+02   1.2185000E+02   2.5000000E-01   9.9100001E+01   2.2875000E+02   2.9815000E+02
     ;
+    const uloads_cols: usize = 8;
+    const uloads_rows: usize = uloads_cols * 2;
+    const uloads_num_values = uloads_cols * uloads_rows;
 
-    var pos: usize = 0;
-    const values = parseMultiLineMultiValue(allocator, uloads, &pos) catch unreachable;
+    const pos: usize = 0;
+    var resolved_pos: usize = pos;
+    const values = parseMultiLineMultiValue(allocator, uloads, &resolved_pos, @tagName(Token.MAXTIME)) catch unreachable;
     defer allocator.free(values);
 
-    std.debug.print("pos: {d}\n", .{pos});
-
-    for (values) |value| {
-        std.debug.print("{s} ", .{value});
-    }
-
-    try std.testing.expect(true);
+    try std.testing.expect(resolved_pos > pos);
+    try std.testing.expectEqual(uloads_num_values, values.len);
 }
-
-// test "parseSingleLineSingleStringValue: expect unreachable on no EOL" {
-//     const allocator = std.testing.allocator;
-//     const input = try std.fmt.allocPrint(allocator, "\t startup.$41", .{});
-//     defer allocator.free(input);
-//     var pos: usize = 0;
-//
-//     try std.testing.expectError(ParseError.NotFoundEOL, parseSingleLineSingleStringValue(input, &pos, EOL.R));
-// }
