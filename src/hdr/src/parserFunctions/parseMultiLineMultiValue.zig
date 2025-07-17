@@ -59,3 +59,25 @@ test "parseMultiLineMultiValue::OK" {
     try std.testing.expect(resolved_pos > pos);
     try std.testing.expectEqual(uloads_num_values, values.len);
 }
+
+test "parseMultiLineMultiValue::OK:: check pos" {
+    const allocator = std.testing.allocator;
+
+    const uloads =
+        \\ 6.9981980E+06   4.2721165E+06
+        \\MAXTIME   2.2870000E+02   0.0000000E+00   2.2880000E+02   1.2185000E+02   2.5000000E-01   9.9100001E+01   2.2875000E+02   2.9815000E+02
+    ;
+    const uloads_cols: usize = 2;
+    const uloads_rows: usize = 1;
+    const uloads_num_values = uloads_cols * uloads_rows;
+    const expected_pos: usize = 31;
+
+    const pos: usize = 0;
+    var resolved_pos: usize = pos;
+    const values = parseMultiLineMultiValue(allocator, uloads, &resolved_pos, @tagName(Token.MAXTIME)) catch unreachable;
+    defer allocator.free(values);
+
+    try std.testing.expect(resolved_pos > pos);
+    try std.testing.expectEqual(expected_pos, resolved_pos);
+    try std.testing.expectEqual(uloads_num_values, values.len);
+}
