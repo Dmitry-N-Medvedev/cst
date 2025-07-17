@@ -250,7 +250,7 @@ const Parser = struct {
                     _ = try self.fsm.do(Event.SIG_MAXTIME);
                 },
                 Token.MINTIME => {
-                    _ = try self.fsm.do(Event.SIG_MAXTIME);
+                    _ = try self.fsm.do(Event.SIG_MINTIME);
                 },
                 Token.MEAN => {
                     _ = try self.fsm.do(Event.SIG_MEAN);
@@ -381,8 +381,8 @@ const Parser = struct {
             State.MEAN => {
                 _ = parseSingleLineStingleStringValue(self.input, &self.input_idx, self.default_EOL) catch unreachable;
             },
-            else => {
-                unreachable;
+            State.EOF => {
+                std.debug.print("EOF", .{});
             },
         }
 
