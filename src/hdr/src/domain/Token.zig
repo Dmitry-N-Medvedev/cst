@@ -135,7 +135,7 @@ test "find Token" {
     for (tokens) |t| {
         if (std.mem.startsWith(u8, input, @tagName(t))) {
             measurementReport.tokenResolveLoop = timer.read();
-            std.debug.print("token: {any}\n", .{t});
+            // std.debug.print("token: {any}\n", .{t});
             break;
         }
     }
@@ -146,5 +146,5 @@ test "find Token" {
     ;
     const r = try std.fmt.allocPrint(std.testing.allocator, timeer_report, .{ measurementReport.getByLen, measurementReport.tokenResolveLoop });
     defer std.testing.allocator.free(r);
-    std.debug.print("time measurements:\n{s}\n", .{r});
+    // std.debug.print("time measurements:\n{s}\n", .{r});
 }

@@ -8,6 +8,9 @@ const TokenFormValue = @import("domain/Token.zig").TokenFormValue;
 const TokenVarUnitValue = @import("domain/Token.zig").TokenVarUnitValue;
 const TokenAxiUnitValue = @import("domain/Token.zig").TokenAxiUnitValue;
 const parseSingleLineStingleStringValue = @import("parserFunctions/parseSingleLineSingleStringValue.zig").parseSingleLineSingleStringValue;
+const parseMultiLineMultiValue = @import("parserFunctions/parseMultiLineMultiValue.zig").parseMultiLineMultiValue;
+const EOL = @import("parserFunctions/EOL.zig").EOL;
+const Whitespace = @import("parserFunctions/WhiteSpace.zig").Whitespace;
 
 const State = enum {
     INITIAL,
@@ -77,6 +80,24 @@ const transition_table = [_]zigfsm.Transition(State, Event){
     .{ .event = .SIG_CONTENT, .from = .FORMAT, .to = .CONTENT },
     .{ .event = .SIG_CONFIG, .from = .CONTENT, .to = .CONFIG },
     .{ .event = .SIG_NDIMENS, .from = .CONFIG, .to = .NDIMENS },
+    .{ .event = .SIG_DIMENS, .from = .NDIMENS, .to = .DIMENS },
+    .{ .event = .SIG_GENLAB, .from = .DIMENS, .to = .GENLAB },
+    .{ .event = .SIG_VARIAB, .from = .GENLAB, .to = .VARIAB },
+    .{ .event = .SIG_VARUNIT, .from = .VARIAB, .to = .VARUNIT },
+    .{ .event = .SIG_AXISLAB, .from = .VARUNIT, .to = .AXISLAB },
+    .{ .event = .SIG_AXIUNIT, .from = .AXISLAB, .to = .AXIUNIT },
+    .{ .event = .SIG_AXIMETH, .from = .AXIUNIT, .to = .AXIMETH },
+    .{ .event = .SIG_MIN, .from = .AXIMETH, .to = .MIN },
+    .{ .event = .SIG_STEP, .from = .MIN, .to = .STEP },
+    .{ .event = .SIG_NVARS, .from = .STEP, .to = .NVARS },
+    .{ .event = .SIG_AXIVAL, .from = .AXIMETH, .to = .AXIVAL },
+    .{ .event = .SIG_AXISLAB, .from = .AXIVAL, .to = .AXISLAB },
+    .{ .event = .SIG_ULOADS, .from = .NVARS, .to = .ULOADS },
+    .{ .event = .SIG_MAXTIME, .from = .ULOADS, .to = .MAXTIME },
+    .{ .event = .SIG_MINTIME, .from = .MAXTIME, .to = .MINTIME },
+    .{ .event = .SIG_MEAN, .from = .MINTIME, .to = .MEAN },
+    .{ .event = .SIG_ULOADS, .from = .MEAN, .to = .ULOADS },
+    .{ .event = .SIG_EOF, .from = .MEAN, .to = .EOF },
 };
 
 const Result = struct {
@@ -130,6 +151,7 @@ const FSM = zigfsm.StateMachineFromTable(State, Event, &transition_table, State.
 
 const tokenInfo = @typeInfo(Token).@"enum";
 const tokenFields = tokenInfo.fields;
+const tt: TokenTable = TokenTable{};
 
 const Parser = struct {
     handler: FSM.Handler,
@@ -139,6 +161,7 @@ const Parser = struct {
     allocator: std.mem.Allocator,
     result: *Result,
     current_token: Token,
+    default_EOL: EOL = EOL.RN,
 
     pub fn parse(fsm: *FSM, input: []const u8, result: *Result) !void {
         var instance: @This() = .{
@@ -157,10 +180,10 @@ const Parser = struct {
     }
 
     fn execute(self: *@This()) !void {
-        while (self.input_idx < self.input.len) : (self.input_idx += 1) {
-            self.current_token = resolveToken(self.input, &self.input_idx).?;
-
-            std.debug.print("self.current_token: {any}; input_idx: {d}\n", .{ self.current_token, self.input_idx });
+        while (self.input_idx < self.input.len) {
+            std.debug.print("[0] SELF.INPUT_IDX: {d}\n", .{self.input_idx});
+            self.current_token = resolveKey(self.input, &self.input_idx).?;
+            std.debug.print("[1] SELF.INPUT_IDX: {d} self.current_token: {any}\n", .{ self.input_idx, self.current_token });
 
             switch (self.current_token) {
                 Token.FILE => {
@@ -187,45 +210,79 @@ const Parser = struct {
                 Token.NDIMENS => {
                     _ = try self.fsm.do(Event.SIG_NDIMENS);
                 },
-                else => {
-                    // std.debug.print("switch ELSE:\t{any}\n", .{self.current_token});
+                Token.DIMENS => {
+                    _ = try self.fsm.do(Event.SIG_DIMENS);
+                },
+                Token.GENLAB => {
+                    _ = try self.fsm.do(Event.SIG_GENLAB);
+                },
+                Token.VARIAB => {
+                    _ = try self.fsm.do(Event.SIG_VARIAB);
+                },
+                Token.VARUNIT => {
+                    _ = try self.fsm.do(Event.SIG_VARUNIT);
+                },
+                Token.AXISLAB => {
+                    _ = try self.fsm.do(Event.SIG_AXISLAB);
+                },
+                Token.AXIUNIT => {
+                    _ = try self.fsm.do(Event.SIG_AXIUNIT);
+                },
+                Token.AXIMETH => {
+                    _ = try self.fsm.do(Event.SIG_AXIMETH);
+                },
+                Token.AXIVAL => {
+                    _ = try self.fsm.do(Event.SIG_AXIVAL);
+                },
+                Token.MIN => {
+                    _ = try self.fsm.do(Event.SIG_MIN);
+                },
+                Token.STEP => {
+                    _ = try self.fsm.do(Event.SIG_STEP);
+                },
+                Token.NVARS => {
+                    _ = try self.fsm.do(Event.SIG_NVARS);
+                },
+                Token.ULOADS => {
+                    _ = try self.fsm.do(Event.SIG_ULOADS);
+                },
+                Token.MAXTIME => {
+                    _ = try self.fsm.do(Event.SIG_MAXTIME);
+                },
+                Token.MINTIME => {
+                    _ = try self.fsm.do(Event.SIG_MAXTIME);
+                },
+                Token.MEAN => {
+                    _ = try self.fsm.do(Event.SIG_MEAN);
                 },
             }
+
+            std.debug.print("[2] SELF.INPUT_IDX: {d} self.current_token: {any}\n", .{ self.input_idx, self.current_token });
         }
     }
 
-    fn resolveToken(input: []const u8, input_idx: *usize) ?Token {
-        const tokenFound: Token = undefined;
-        //
-        const whitespace = " \t\r\n";
-        const next_space_pos = std.mem.indexOfAny(u8, input, whitespace).?;
-        std.debug.print("next_space_pos: {d}\n", .{next_space_pos});
-        // //
-        // const tt: TokenTable = TokenTable{};
-        // const nextPos = input_idx.* + next_space_pos;
-        // const heystack = input[input_idx.*..nextPos];
+    fn resolveKey(input: []const u8, input_idx: *usize) ?Token {
+        const rel_space_pos = std.mem.indexOfAny(u8, input[input_idx.*..], Whitespace) orelse unreachable;
+        const abs_space_pos = input_idx.* + rel_space_pos;
+        const tokenLength = abs_space_pos - input_idx.*;
+        const haystack = input[input_idx.*..abs_space_pos];
+        const tokens = tt.getByLen(tokenLength);
 
-        for (TokenOrder) |token| {
-            const tokenString = @tagName(token);
-            const nextPos = input_idx.* + tokenString.len;
-            std.debug.print("probing for {s}\t'{s}'; input_idx..nextPos: [{d}..{d}]\n", .{ tokenString, input[input_idx.*..nextPos], input_idx.*, nextPos });
+        if (tokens.len == 0) {
+            std.debug.print("ERR .resolveKey:\n\tinput_idx: {d}\n\ttokenLength: {d}\n\thaystack: {s}\n\ttokens: {any}\n", .{ input_idx.*, tokenLength, haystack, tokens });
+            unreachable;
+        }
 
-            if (nextPos > input.len) {
-                std.debug.print("nextPos > input.len: {d} > {d}\n", .{ nextPos, input.len });
+        for (tokens) |tokenFound| {
+            if (std.mem.eql(u8, haystack, @tagName(tokenFound))) {
+                input_idx.* = abs_space_pos;
 
-                unreachable;
-            }
-
-            if (std.mem.eql(u8, tokenString, input[input_idx.*..nextPos])) {
-                std.debug.print("found '{any}'\t[{d}..{d}]\n", .{ token, input_idx.*, nextPos - 1 });
-                input_idx.* = nextPos;
-                tokenFound = token;
-
-                break;
+                std.debug.print("OK .resolveKey:\n\tinput_idx: {d}\n\ttokenLength: {d}\n\thaystack: {s}\n\ttokens: {any}\n", .{ input_idx.*, tokenLength, haystack, tokens });
+                return tokenFound;
             }
         }
-        //
-        return tokenFound;
+
+        unreachable;
     }
 
     pub fn onTransition(handler: *FSM.Handler, event: ?Event, from: State, to: State) zigfsm.HandlerResult {
@@ -236,41 +293,92 @@ const Parser = struct {
         switch (to) {
             State.INITIAL => unreachable,
             State.FILE => {
-                const fileName = parseSingleLineStingleStringValue(self.input, &self.input_idx);
+                const fileName = parseSingleLineStingleStringValue(self.input, &self.input_idx, self.default_EOL) catch unreachable;
                 self.result.FILE.appendSlice(fileName) catch unreachable;
+
+                std.debug.print("State.FILE:\n\tfileName: {s}\n\tinput_idx: {d}\n\tcurrent_token: {any}\n", .{ fileName, self.input_idx, self.current_token });
             },
             State.ACCESS => {
-                const accessValue = parseSingleLineStingleStringValue(self.input, &self.input_idx);
+                const accessValue = parseSingleLineStingleStringValue(self.input, &self.input_idx, self.default_EOL) catch unreachable;
                 const accessToken = std.meta.stringToEnum(TokenAccessValue, accessValue).?;
                 self.result.ACCESS = accessToken;
+
+                std.debug.print("State.ACCESS:\n\taccessValue: {s}\n\taccessToken: {any}\n\tcurrent_token: {any}\n\tself.input_idx: {d}\n", .{ accessValue, accessToken, self.current_token, self.input_idx });
             },
             State.FORM => {
-                const formValue = parseSingleLineStingleStringValue(self.input, &self.input_idx);
+                const formValue = parseSingleLineStingleStringValue(self.input, &self.input_idx, self.default_EOL) catch unreachable;
                 const formTokenValue = std.meta.stringToEnum(TokenFormValue, formValue).?;
                 self.result.FORM = formTokenValue;
             },
             State.RECL => {
-                const reclValue = parseSingleLineStingleStringValue(self.input, &self.input_idx);
+                const reclValue = parseSingleLineStingleStringValue(self.input, &self.input_idx, self.default_EOL) catch unreachable;
                 self.result.RECL = std.fmt.parseInt(u8, reclValue, 10) catch unreachable;
             },
             State.FORMAT => {
-                const formatValue = parseSingleLineStingleStringValue(self.input, &self.input_idx);
+                const formatValue = parseSingleLineStingleStringValue(self.input, &self.input_idx, self.default_EOL) catch unreachable;
                 self.result.FORMAT = formatValue;
             },
             State.CONTENT => {
-                const contentValue = parseSingleLineStingleStringValue(self.input, &self.input_idx);
+                const contentValue = parseSingleLineStingleStringValue(self.input, &self.input_idx, self.default_EOL) catch unreachable;
                 self.result.CONTENT = contentValue;
             },
             State.CONFIG => {
-                const configValue = parseSingleLineStingleStringValue(self.input, &self.input_idx);
+                const configValue = parseSingleLineStingleStringValue(self.input, &self.input_idx, self.default_EOL) catch unreachable;
                 self.result.CONFIG = configValue;
             },
             State.NDIMENS => {
-                const ndimensValue = parseSingleLineStingleStringValue(self.input, &self.input_idx);
+                const ndimensValue = parseSingleLineStingleStringValue(self.input, &self.input_idx, self.default_EOL) catch unreachable;
                 self.result.NDIMENS = std.fmt.parseInt(u8, ndimensValue, 10) catch unreachable;
             },
+            State.DIMENS => {
+                _ = parseSingleLineStingleStringValue(self.input, &self.input_idx, self.default_EOL) catch unreachable;
+            },
+            State.GENLAB => {
+                const genlabValue = parseSingleLineStingleStringValue(self.input, &self.input_idx, self.default_EOL) catch unreachable;
+                self.result.GENLAB = genlabValue;
+            },
+            State.VARIAB => {
+                _ = parseSingleLineStingleStringValue(self.input, &self.input_idx, self.default_EOL) catch unreachable;
+            },
+            State.VARUNIT => {
+                _ = parseSingleLineStingleStringValue(self.input, &self.input_idx, self.default_EOL) catch unreachable;
+            },
+            State.AXISLAB => {
+                _ = parseSingleLineStingleStringValue(self.input, &self.input_idx, self.default_EOL) catch unreachable;
+            },
+            State.AXIUNIT => {
+                _ = parseSingleLineStingleStringValue(self.input, &self.input_idx, self.default_EOL) catch unreachable;
+            },
+            State.AXIMETH => {
+                _ = parseSingleLineStingleStringValue(self.input, &self.input_idx, self.default_EOL) catch unreachable;
+            },
+            State.AXIVAL => {
+                _ = parseSingleLineStingleStringValue(self.input, &self.input_idx, self.default_EOL) catch unreachable;
+            },
+            State.MIN => {
+                _ = parseSingleLineStingleStringValue(self.input, &self.input_idx, self.default_EOL) catch unreachable;
+            },
+            State.STEP => {
+                _ = parseSingleLineStingleStringValue(self.input, &self.input_idx, self.default_EOL) catch unreachable;
+            },
+            State.NVARS => {
+                _ = parseSingleLineStingleStringValue(self.input, &self.input_idx, self.default_EOL) catch unreachable;
+            },
+            State.ULOADS => {
+                const uloadsValue = parseMultiLineMultiValue(self.allocator, self.input, &self.input_idx, self.default_EOL) catch unreachable;
+                std.debug.print("ULOAD:\n{any}\n", .{uloadsValue});
+            },
+            State.MAXTIME => {
+                _ = parseSingleLineStingleStringValue(self.input, &self.input_idx, self.default_EOL) catch unreachable;
+            },
+            State.MINTIME => {
+                _ = parseSingleLineStingleStringValue(self.input, &self.input_idx, self.default_EOL) catch unreachable;
+            },
+            State.MEAN => {
+                _ = parseSingleLineStingleStringValue(self.input, &self.input_idx, self.default_EOL) catch unreachable;
+            },
             else => {
-                std.debug.print(".onTransition::[ELSE]\n", .{});
+                unreachable;
             },
         }
 
@@ -287,7 +395,7 @@ const Parser = struct {
         const config = result.CONFIG;
         const ndimens = result.NDIMENS;
         // const dimens = result.DIMENS;
-        // const genlab = result.*.GENLAB;
+        const genlab = result.*.GENLAB;
         // const variab = result.*.VARIAB;
         // const varunit = result.*.VARUNIT;
         // const axislab = result.*.AXISLAB;
@@ -311,7 +419,7 @@ const Parser = struct {
             \\ .CONFIG: {s}
             \\ .NDIMENS: {d}
             // \\ .DIMENS: {d}
-            // \\ .GENLAB: {s}
+            \\ .GENLAB: {s}
             // \\ .VARIAB: {s}
             // \\ .VARUNIT: {s}
             // \\ .AXISLAB: {s}
@@ -335,7 +443,7 @@ const Parser = struct {
             config,
             ndimens,
             // dimens,
-            // genlab,
+            genlab,
             // variab,
             // varunit,
             // axislab,
