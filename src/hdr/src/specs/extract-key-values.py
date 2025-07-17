@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 from collections import defaultdict
 
-INPUT_DIR = "../../../../../../cst/.data/3.1_s11/"   # Change to your input directory
+INPUT_DIR = "../../../../.data/3.1_s11"   # Change to your input directory
 OUTPUT_DIR = "./aggregated/"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
@@ -74,6 +74,6 @@ for file_path in Path(INPUT_DIR).rglob("*"):
 for key in KNOWN_KEYS:
     if key in key_lines:
         with open(os.path.join(OUTPUT_DIR, f"{key}.txt"), "w", encoding="utf-8") as out:
-            out.write("\n".join(key_lines[key]))
-            out.write("\n")
+            out.write("\r\n".join(key_lines[key]))
+            out.write("\r\n")
 

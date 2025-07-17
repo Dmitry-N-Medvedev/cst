@@ -23,7 +23,7 @@ pub fn build(b: *std.Build) !void {
         },
     });
     const hdr_parser = b.addExecutable(.{
-        .name = "hdr_parser",
+        .name = "hdr",
         .root_module = hdr_parser_mod,
     });
     const run_hdr_parser_cmd = b.addRunArtifact(hdr_parser);
@@ -37,10 +37,23 @@ pub fn build(b: *std.Build) !void {
     run_hdr_parser_cmd.step.dependOn(b.getInstallStep());
     b.installArtifact(hdr_parser);
 
-    // test
+    // DEBUG
     const composed_root_specs_file_name = try composeRootTestFileName(b.allocator, hdr_parser_root_file);
-
     try generateTestFile(b.allocator, composed_root_specs_file_name);
+
+    const debug = b.addExecutable(.{
+        .name = "debug",
+        .root_module = hdr_parser_mod,
+    });
+    // const debugInstallPath = b.getInstallPath(.bin, "debug");
+    const debugInstall = b.addInstallArtifact(debug, .{
+        .dest_sub_path = "debug",
+    });
+    b.installArtifact(debug);
+    const debugStep = b.step("debug", "produce debug executable");
+    debugStep.dependOn(&debugInstall.step);
+    b.default_step.dependOn(debugStep);
+    // test
 
     const test_step = b.step("test", "run tests");
     const hdr_parser_test = b.addTest(.{
@@ -51,7 +64,7 @@ pub fn build(b: *std.Build) !void {
     hdr_parser_test.root_module.addImport("zigfsm", fsm.module("zigfsm"));
 
     const run_hdr_parser_test = b.addRunArtifact(hdr_parser_test);
-    run_hdr_parser_test.step.name = "test hdr_parser";
+    run_hdr_parser_test.step.name = "run";
     test_step.dependOn(&run_hdr_parser_test.step);
 }
 
