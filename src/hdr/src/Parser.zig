@@ -157,7 +157,7 @@ const Parser = struct {
     handler: FSM.Handler,
     fsm: *FSM,
     input: []const u8,
-    input_idx: usize,
+    input_pos: usize,
     allocator: std.mem.Allocator,
     result: *Result,
     current_token: Token,
@@ -168,7 +168,7 @@ const Parser = struct {
             .handler = zigfsm.Interface.make(FSM.Handler, @This()),
             .fsm = fsm,
             .input = input,
-            .input_idx = 0,
+            .input_pos = 0,
             .allocator = std.heap.page_allocator,
             .result = result,
             .current_token = undefined,
@@ -180,10 +180,8 @@ const Parser = struct {
     }
 
     fn execute(self: *@This()) !void {
-        while (self.input_idx < self.input.len) {
-            std.debug.print("[0] SELF.INPUT_IDX: {d}\n", .{self.input_idx});
-            self.current_token = resolveKey(self.input, &self.input_idx).?;
-            std.debug.print("[1] SELF.INPUT_IDX: {d} self.current_token: {any}\n", .{ self.input_idx, self.current_token });
+        while (self.input_pos < self.input.len) {
+            self.current_token = resolveKey(self.input, &self.input_pos).?;
 
             switch (self.current_token) {
                 Token.FILE => {
@@ -256,28 +254,28 @@ const Parser = struct {
                     _ = try self.fsm.do(Event.SIG_MEAN);
                 },
             }
-
-            std.debug.print("[2] SELF.INPUT_IDX: {d} self.current_token: {any}\n", .{ self.input_idx, self.current_token });
         }
     }
 
-    fn resolveKey(input: []const u8, input_idx: *usize) ?Token {
-        const rel_space_pos = std.mem.indexOfAny(u8, input[input_idx.*..], Whitespace) orelse unreachable;
-        const abs_space_pos = input_idx.* + rel_space_pos;
-        const tokenLength = abs_space_pos - input_idx.*;
-        const haystack = input[input_idx.*..abs_space_pos];
+    fn resolveKey(input: []const u8, input_pos: *usize) ?Token {
+        const rel_space_pos = std.mem.indexOfAny(u8, input[input_pos.*..], Whitespace) orelse unreachable;
+        const abs_space_pos = input_pos.* + rel_space_pos;
+        const tokenLength = abs_space_pos - input_pos.*;
+        const haystack = input[input_pos.*..abs_space_pos];
         const tokens = tt.getByLen(tokenLength);
 
         if (tokens.len == 0) {
-            std.debug.print("ERR .resolveKey:\n\tinput_idx: {d}\n\ttokenLength: {d}\n\thaystack: {s}\n\ttokens: {any}\n", .{ input_idx.*, tokenLength, haystack, tokens });
+            std.debug.print("ERR .resolveKey:\n\tinput_pos: {d}\n\ttokenLength: {d}\n\thaystack: {s}\n\ttokens: {any}\n", .{ input_pos.*, tokenLength, haystack, tokens });
             unreachable;
         }
 
         for (tokens) |tokenFound| {
             if (std.mem.eql(u8, haystack, @tagName(tokenFound))) {
-                input_idx.* = abs_space_pos;
+                const prev_pos = input_pos.*;
 
-                std.debug.print("OK .resolveKey:\n\tinput_idx: {d}\n\ttokenLength: {d}\n\thaystack: {s}\n\ttokens: {any}\n", .{ input_idx.*, tokenLength, haystack, tokens });
+                input_pos.* = abs_space_pos;
+
+                std.debug.print("OK .resolveKey: {s}\tpos: {d} => {d} [δ = {d}]\n", .{ @tagName(tokenFound), prev_pos, input_pos.*, tokenLength });
                 return tokenFound;
             }
         }
@@ -286,103 +284,127 @@ const Parser = struct {
     }
 
     pub fn onTransition(handler: *FSM.Handler, event: ?Event, from: State, to: State) zigfsm.HandlerResult {
+        _ = event;
+        _ = from;
         const self = zigfsm.Interface.downcast(@This(), handler);
 
-        std.debug.print("[ {any} ] ==({any})==> [ {any} ]\n", .{ from, event, to });
+        // std.debug.print("[ {any} ] ==({any})==> [ {any} ]\n", .{ from, event, to });
+        std.debug.print("{s}\t", .{@tagName(to)});
 
         switch (to) {
             State.INITIAL => unreachable,
             State.FILE => {
-                const fileName = parseSingleLineStingleStringValue(self.input, &self.input_idx, self.default_EOL) catch unreachable;
+                const fileName = parseSingleLineStingleStringValue(self.input, &self.input_pos, self.default_EOL) catch unreachable;
                 self.result.FILE.appendSlice(fileName) catch unreachable;
-
-                std.debug.print("State.FILE:\n\tfileName: {s}\n\tinput_idx: {d}\n\tcurrent_token: {any}\n", .{ fileName, self.input_idx, self.current_token });
+                std.debug.print("'{s}'\tinput_pos: {d}\n", .{ fileName, self.input_pos });
             },
             State.ACCESS => {
-                const accessValue = parseSingleLineStingleStringValue(self.input, &self.input_idx, self.default_EOL) catch unreachable;
+                const accessValue = parseSingleLineStingleStringValue(self.input, &self.input_pos, self.default_EOL) catch unreachable;
                 const accessToken = std.meta.stringToEnum(TokenAccessValue, accessValue).?;
                 self.result.ACCESS = accessToken;
-
-                std.debug.print("State.ACCESS:\n\taccessValue: {s}\n\taccessToken: {any}\n\tcurrent_token: {any}\n\tself.input_idx: {d}\n", .{ accessValue, accessToken, self.current_token, self.input_idx });
+                std.debug.print("{s}\tinput_pos: {d}\n", .{ @tagName(accessToken), self.input_pos });
             },
             State.FORM => {
-                const formValue = parseSingleLineStingleStringValue(self.input, &self.input_idx, self.default_EOL) catch unreachable;
+                const formValue = parseSingleLineStingleStringValue(self.input, &self.input_pos, self.default_EOL) catch unreachable;
                 const formTokenValue = std.meta.stringToEnum(TokenFormValue, formValue).?;
                 self.result.FORM = formTokenValue;
+                std.debug.print("{any}\tinput_pos: {d}\n", .{ formTokenValue, self.input_pos });
             },
             State.RECL => {
-                const reclValue = parseSingleLineStingleStringValue(self.input, &self.input_idx, self.default_EOL) catch unreachable;
+                const reclValue = parseSingleLineStingleStringValue(self.input, &self.input_pos, self.default_EOL) catch unreachable;
                 self.result.RECL = std.fmt.parseInt(u8, reclValue, 10) catch unreachable;
+                std.debug.print("{s}\tinput_pos: {d}\n", .{ reclValue, self.input_pos });
             },
             State.FORMAT => {
-                const formatValue = parseSingleLineStingleStringValue(self.input, &self.input_idx, self.default_EOL) catch unreachable;
+                const formatValue = parseSingleLineStingleStringValue(self.input, &self.input_pos, self.default_EOL) catch unreachable;
                 self.result.FORMAT = formatValue;
+                std.debug.print("{s}\tinput_pos: {d}\n", .{ formatValue, self.input_pos });
             },
             State.CONTENT => {
-                const contentValue = parseSingleLineStingleStringValue(self.input, &self.input_idx, self.default_EOL) catch unreachable;
+                const contentValue = parseSingleLineStingleStringValue(self.input, &self.input_pos, self.default_EOL) catch unreachable;
                 self.result.CONTENT = contentValue;
+                std.debug.print("{s}\tinput_pos: {d}\n", .{ contentValue, self.input_pos });
             },
             State.CONFIG => {
-                const configValue = parseSingleLineStingleStringValue(self.input, &self.input_idx, self.default_EOL) catch unreachable;
+                const configValue = parseSingleLineStingleStringValue(self.input, &self.input_pos, self.default_EOL) catch unreachable;
                 self.result.CONFIG = configValue;
+                std.debug.print("{s}\tinput_pos: {d}\n", .{ configValue, self.input_pos });
             },
             State.NDIMENS => {
-                const ndimensValue = parseSingleLineStingleStringValue(self.input, &self.input_idx, self.default_EOL) catch unreachable;
+                const ndimensValue = parseSingleLineStingleStringValue(self.input, &self.input_pos, self.default_EOL) catch unreachable;
                 self.result.NDIMENS = std.fmt.parseInt(u8, ndimensValue, 10) catch unreachable;
+                std.debug.print("{s}\tinput_pos: {d}\n", .{ ndimensValue, self.input_pos });
             },
             State.DIMENS => {
-                _ = parseSingleLineStingleStringValue(self.input, &self.input_idx, self.default_EOL) catch unreachable;
+                const dimensValue = parseSingleLineStingleStringValue(self.input, &self.input_pos, self.default_EOL) catch unreachable;
+                std.debug.print("{s}\tinput_pos: {d}\n", .{ dimensValue, self.input_pos });
             },
             State.GENLAB => {
-                const genlabValue = parseSingleLineStingleStringValue(self.input, &self.input_idx, self.default_EOL) catch unreachable;
+                const genlabValue = parseSingleLineStingleStringValue(self.input, &self.input_pos, self.default_EOL) catch unreachable;
                 self.result.GENLAB = genlabValue;
+                std.debug.print("{s}\tinput_pos: {d}\n", .{ genlabValue, self.input_pos });
             },
             State.VARIAB => {
-                _ = parseSingleLineStingleStringValue(self.input, &self.input_idx, self.default_EOL) catch unreachable;
+                const variabValue = parseSingleLineStingleStringValue(self.input, &self.input_pos, self.default_EOL) catch unreachable;
+                std.debug.print("{s}\tinput_pos: {d}\n", .{ variabValue, self.input_pos });
             },
             State.VARUNIT => {
-                _ = parseSingleLineStingleStringValue(self.input, &self.input_idx, self.default_EOL) catch unreachable;
+                const varunitValue = parseSingleLineStingleStringValue(self.input, &self.input_pos, self.default_EOL) catch unreachable;
+                std.debug.print("{s}\tinput_pos: {d}\n", .{ varunitValue, self.input_pos });
             },
             State.AXISLAB => {
-                _ = parseSingleLineStingleStringValue(self.input, &self.input_idx, self.default_EOL) catch unreachable;
+                const axislabValue = parseSingleLineStingleStringValue(self.input, &self.input_pos, self.default_EOL) catch unreachable;
+                std.debug.print("{s}\tinput_pos: {d}\n", .{ axislabValue, self.input_pos });
             },
             State.AXIUNIT => {
-                _ = parseSingleLineStingleStringValue(self.input, &self.input_idx, self.default_EOL) catch unreachable;
+                const axiunitValue = parseSingleLineStingleStringValue(self.input, &self.input_pos, self.default_EOL) catch unreachable;
+                std.debug.print("{s}\tinput_pos: {d}\n", .{ axiunitValue, self.input_pos });
             },
             State.AXIMETH => {
-                _ = parseSingleLineStingleStringValue(self.input, &self.input_idx, self.default_EOL) catch unreachable;
+                const aximethValue = parseSingleLineStingleStringValue(self.input, &self.input_pos, self.default_EOL) catch unreachable;
+                std.debug.print("{s}\tinput_pos: {d}\n", .{ aximethValue, self.input_pos });
             },
             State.AXIVAL => {
-                _ = parseSingleLineStingleStringValue(self.input, &self.input_idx, self.default_EOL) catch unreachable;
+                const axivalValue = parseSingleLineStingleStringValue(self.input, &self.input_pos, self.default_EOL) catch unreachable;
+                std.debug.print("{s}\n\tinput_pos: {d}\n", .{ axivalValue, self.input_pos });
             },
             State.MIN => {
-                _ = parseSingleLineStingleStringValue(self.input, &self.input_idx, self.default_EOL) catch unreachable;
+                const minValue = parseSingleLineStingleStringValue(self.input, &self.input_pos, self.default_EOL) catch unreachable;
+                std.debug.print("{s}\tinput_pos: {d}\n", .{ minValue, self.input_pos });
             },
             State.STEP => {
-                _ = parseSingleLineStingleStringValue(self.input, &self.input_idx, self.default_EOL) catch unreachable;
+                const stepValue = parseSingleLineStingleStringValue(self.input, &self.input_pos, self.default_EOL) catch unreachable;
+                std.debug.print("{s}\tinput_pos: {d}\n", .{ stepValue, self.input_pos });
             },
             State.NVARS => {
-                _ = parseSingleLineStingleStringValue(self.input, &self.input_idx, self.default_EOL) catch unreachable;
+                const nvarsValue = parseSingleLineStingleStringValue(self.input, &self.input_pos, self.default_EOL) catch unreachable;
+                std.debug.print("{s}\tinput_pos: {d}\n", .{ nvarsValue, self.input_pos });
             },
             State.ULOADS => {
-                const uloadsValues = parseMultiLineMultiValue(self.allocator, self.input, &self.input_idx, @tagName(Token.MAXTIME)) catch unreachable;
-                std.debug.print("ULOAD:\n", .{});
-                for (uloadsValues) |uloadsValue| {
+                const uloadsValues = parseMultiLineMultiValue(self.allocator, self.input, &self.input_pos, @tagName(Token.MAXTIME)) catch unreachable;
+                std.debug.print("\n", .{});
+                for (uloadsValues, 0..) |uloadsValue, i| {
                     std.debug.print("{s} ", .{uloadsValue});
+                    if ((i + 1) % 8 == 0) {
+                        std.debug.print("\n", .{});
+                    }
                 }
                 std.debug.print("\n", .{});
             },
             State.MAXTIME => {
-                _ = parseSingleLineStingleStringValue(self.input, &self.input_idx, self.default_EOL) catch unreachable;
+                const maxtimeValue = parseSingleLineStingleStringValue(self.input, &self.input_pos, self.default_EOL) catch unreachable;
+                std.debug.print("{s}\tinput_pos: {d}\n", .{ maxtimeValue, self.input_pos });
             },
             State.MINTIME => {
-                _ = parseSingleLineStingleStringValue(self.input, &self.input_idx, self.default_EOL) catch unreachable;
+                const mintimeValue = parseSingleLineStingleStringValue(self.input, &self.input_pos, self.default_EOL) catch unreachable;
+                std.debug.print("{s}\tinput_pos: {d}\n", .{ mintimeValue, self.input_pos });
             },
             State.MEAN => {
-                _ = parseSingleLineStingleStringValue(self.input, &self.input_idx, self.default_EOL) catch unreachable;
+                const meanValue = parseSingleLineStingleStringValue(self.input, &self.input_pos, self.default_EOL) catch unreachable;
+                std.debug.print("{s}\tinput_pos: {d}\n", .{ meanValue, self.input_pos });
             },
             State.EOF => {
-                std.debug.print("EOF", .{});
+                std.debug.print("input_pos: {d}\n", .{self.input_pos});
             },
         }
 
@@ -474,7 +496,7 @@ test "OK" {
 
     const contents = try specs.readToEndAlloc(allocator, std.math.maxInt(usize));
     defer allocator.free(contents);
-    std.debug.print("contents.len: {d}\n", .{contents.len});
+    std.debug.print("file length: {d}\n", .{contents.len});
 
     var result: Result = try Result.init(allocator);
     defer result.deinit();
