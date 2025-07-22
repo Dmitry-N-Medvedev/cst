@@ -7,8 +7,8 @@ const TokenAccessValue = @import("domain/Token.zig").TokenAccessValue;
 const TokenFormValue = @import("domain/Token.zig").TokenFormValue;
 const TokenVarUnitValue = @import("domain/Token.zig").TokenVarUnitValue;
 const TokenAxiUnitValue = @import("domain/Token.zig").TokenAxiUnitValue;
-const parseSingleLineStingleStringValue = @import("parserFunctions/parseSingleLineSingleStringValue.zig").parseSingleLineSingleStringValue;
-const parseMultiLineMultiValue = @import("parserFunctions/parseMultiLineMultiValue.zig").parseMultiLineMultiValue;
+const parseSingleValue = @import("parserFunctions/parseSingleValue.zig").parseSingleValue;
+const parseMultiValue = @import("parserFunctions/parseMultiValue.zig").parseMultiValue;
 const EOL = @import("parserFunctions/EOL.zig").EOL;
 const Whitespace = @import("parserFunctions/WhiteSpace.zig").Whitespace;
 
@@ -111,11 +111,12 @@ const Result = struct {
     NDIMENS: u8 = undefined,
     DIMENS: []u16 = &[_]u16{},
     GENLAB: []const u8 = &[_]u8{},
-    VARIAB: []const u8 = &[_]u8{},
+    VARIAB: []const []const u8 = &[_][]const u8{},
     VARUNIT: []const TokenVarUnitValue = &[_]TokenVarUnitValue{},
     AXISLAB: std.ArrayList([]const u8),
-    AXIUNIT: std.ArrayList([]const TokenAxiUnitValue),
+    AXIUNIT: std.ArrayList(TokenAxiUnitValue),
     AXIMETH: u8 = undefined,
+    AXIVAL: []const f64 = undefined,
     MIN: f64 = undefined,
     STEP: f64 = undefined,
     NVARS: u8 = undefined,
@@ -128,7 +129,7 @@ const Result = struct {
         return Result{
             .FILE = std.ArrayList(u8).init(allocator),
             .AXISLAB = std.ArrayList([]const u8).init(allocator),
-            .AXIUNIT = std.ArrayList([]const TokenAxiUnitValue).init(allocator),
+            .AXIUNIT = std.ArrayList(TokenAxiUnitValue).init(allocator),
             .ULOADS = std.ArrayList([]const f64).init(allocator),
             .MAXTIME = std.ArrayList([]const f64).init(allocator),
             .MINTIME = std.ArrayList([]const f64).init(allocator),
@@ -255,27 +256,35 @@ const Parser = struct {
                 },
             }
         }
+
+        _ = try self.fsm.do(Event.SIG_EOF);
     }
 
-    fn resolveKey(input: []const u8, input_pos: *usize) ?Token {
-        const rel_space_pos = std.mem.indexOfAny(u8, input[input_pos.*..], Whitespace) orelse unreachable;
-        const abs_space_pos = input_pos.* + rel_space_pos;
-        const tokenLength = abs_space_pos - input_pos.*;
-        const haystack = input[input_pos.*..abs_space_pos];
+    fn resolveKey(input: []const u8, pos: *usize) ?Token {
+        const rel_space_pos = std.mem.indexOfAny(u8, input[pos.*..], Whitespace) orelse unreachable;
+
+        if (rel_space_pos == 0) {
+            std.debug.print("ERR: .resolveKey::unreachable: {d} {s}\n", .{ pos.*, input[pos.*..] });
+            unreachable;
+        }
+        const abs_space_pos = pos.* + rel_space_pos;
+        const tokenLength = abs_space_pos - pos.*;
+        const haystack = input[pos.*..abs_space_pos];
+
         const tokens = tt.getByLen(tokenLength);
 
         if (tokens.len == 0) {
-            std.debug.print("ERR .resolveKey:\n\tinput_pos: {d}\n\ttokenLength: {d}\n\thaystack: {s}\n\ttokens: {any}\n", .{ input_pos.*, tokenLength, haystack, tokens });
+            std.debug.print("ERR .resolveKey:\n\tinput_pos: {d}\n\ttokenLength: {d}\n\thaystack: '{s}'\n\ttokens: {any}\n", .{ pos.*, tokenLength, haystack, tokens });
             unreachable;
         }
 
         for (tokens) |tokenFound| {
             if (std.mem.eql(u8, haystack, @tagName(tokenFound))) {
-                const prev_pos = input_pos.*;
+                // const prev_pos = pos.*;
 
-                input_pos.* = abs_space_pos;
+                pos.* = abs_space_pos;
 
-                std.debug.print("OK .resolveKey: {s}\tpos: {d} => {d} [δ = {d}]\n", .{ @tagName(tokenFound), prev_pos, input_pos.*, tokenLength });
+                // std.debug.print(".resolveKey: {s}\tpos: {d} => {d} [δ = {d}]\n", .{ @tagName(tokenFound), prev_pos, pos.*, tokenLength });
                 return tokenFound;
             }
         }
@@ -289,123 +298,127 @@ const Parser = struct {
         const self = zigfsm.Interface.downcast(@This(), handler);
 
         // std.debug.print("[ {any} ] ==({any})==> [ {any} ]\n", .{ from, event, to });
-        std.debug.print("{s}\t", .{@tagName(to)});
 
         switch (to) {
             State.INITIAL => unreachable,
             State.FILE => {
-                const fileName = parseSingleLineStingleStringValue(self.input, &self.input_pos, self.default_EOL) catch unreachable;
-                self.result.FILE.appendSlice(fileName) catch unreachable;
-                std.debug.print("'{s}'\tinput_pos: {d}\n", .{ fileName, self.input_pos });
+                const value = parseSingleValue([]const u8, self.input, &self.input_pos, self.default_EOL.value()) catch unreachable;
+                self.input_pos += self.default_EOL.value().len;
+                self.result.FILE.appendSlice(value) catch unreachable;
             },
             State.ACCESS => {
-                const accessValue = parseSingleLineStingleStringValue(self.input, &self.input_pos, self.default_EOL) catch unreachable;
-                const accessToken = std.meta.stringToEnum(TokenAccessValue, accessValue).?;
-                self.result.ACCESS = accessToken;
-                std.debug.print("{s}\tinput_pos: {d}\n", .{ @tagName(accessToken), self.input_pos });
+                const value = parseSingleValue([]const u8, self.input, &self.input_pos, self.default_EOL.value()) catch unreachable;
+                self.input_pos += self.default_EOL.value().len;
+                const token = std.meta.stringToEnum(TokenAccessValue, value).?;
+                self.result.ACCESS = token;
             },
             State.FORM => {
-                const formValue = parseSingleLineStingleStringValue(self.input, &self.input_pos, self.default_EOL) catch unreachable;
-                const formTokenValue = std.meta.stringToEnum(TokenFormValue, formValue).?;
+                const value = parseSingleValue([]const u8, self.input, &self.input_pos, self.default_EOL.value()) catch unreachable;
+                const formTokenValue = std.meta.stringToEnum(TokenFormValue, value).?;
+                self.input_pos += self.default_EOL.value().len;
                 self.result.FORM = formTokenValue;
-                std.debug.print("{any}\tinput_pos: {d}\n", .{ formTokenValue, self.input_pos });
             },
             State.RECL => {
-                const reclValue = parseSingleLineStingleStringValue(self.input, &self.input_pos, self.default_EOL) catch unreachable;
-                self.result.RECL = std.fmt.parseInt(u8, reclValue, 10) catch unreachable;
-                std.debug.print("{s}\tinput_pos: {d}\n", .{ reclValue, self.input_pos });
+                const value = parseSingleValue(u8, self.input, &self.input_pos, self.default_EOL.value()) catch unreachable;
+                self.input_pos += self.default_EOL.value().len;
+                self.result.RECL = value;
             },
             State.FORMAT => {
-                const formatValue = parseSingleLineStingleStringValue(self.input, &self.input_pos, self.default_EOL) catch unreachable;
-                self.result.FORMAT = formatValue;
-                std.debug.print("{s}\tinput_pos: {d}\n", .{ formatValue, self.input_pos });
+                const value = parseSingleValue([]const u8, self.input, &self.input_pos, self.default_EOL.value()) catch unreachable;
+                self.input_pos += self.default_EOL.value().len;
+                self.result.FORMAT = value;
             },
             State.CONTENT => {
-                const contentValue = parseSingleLineStingleStringValue(self.input, &self.input_pos, self.default_EOL) catch unreachable;
-                self.result.CONTENT = contentValue;
-                std.debug.print("{s}\tinput_pos: {d}\n", .{ contentValue, self.input_pos });
+                const value = parseSingleValue([]const u8, self.input, &self.input_pos, self.default_EOL.value()) catch unreachable;
+                self.input_pos += self.default_EOL.value().len;
+                self.result.CONTENT = value;
             },
             State.CONFIG => {
-                const configValue = parseSingleLineStingleStringValue(self.input, &self.input_pos, self.default_EOL) catch unreachable;
-                self.result.CONFIG = configValue;
-                std.debug.print("{s}\tinput_pos: {d}\n", .{ configValue, self.input_pos });
+                const value = parseSingleValue([]const u8, self.input, &self.input_pos, self.default_EOL.value()) catch unreachable;
+                self.input_pos += self.default_EOL.value().len;
+                self.result.CONFIG = value;
             },
             State.NDIMENS => {
-                const ndimensValue = parseSingleLineStingleStringValue(self.input, &self.input_pos, self.default_EOL) catch unreachable;
-                self.result.NDIMENS = std.fmt.parseInt(u8, ndimensValue, 10) catch unreachable;
-                std.debug.print("{s}\tinput_pos: {d}\n", .{ ndimensValue, self.input_pos });
+                const value = parseSingleValue(u8, self.input, &self.input_pos, self.default_EOL.value()) catch unreachable;
+                self.input_pos += self.default_EOL.value().len;
+                self.result.NDIMENS = value;
             },
             State.DIMENS => {
-                const dimensValue = parseSingleLineStingleStringValue(self.input, &self.input_pos, self.default_EOL) catch unreachable;
-                std.debug.print("{s}\tinput_pos: {d}\n", .{ dimensValue, self.input_pos });
+                const value = parseMultiValue([]u16, self.allocator, self.input, &self.input_pos, self.default_EOL.value()) catch unreachable;
+                self.input_pos += self.default_EOL.value().len;
+                self.result.DIMENS = value;
             },
             State.GENLAB => {
-                const genlabValue = parseSingleLineStingleStringValue(self.input, &self.input_pos, self.default_EOL) catch unreachable;
-                self.result.GENLAB = genlabValue;
-                std.debug.print("{s}\tinput_pos: {d}\n", .{ genlabValue, self.input_pos });
+                const value = parseSingleValue([]const u8, self.input, &self.input_pos, self.default_EOL.value()) catch unreachable;
+                self.input_pos += self.default_EOL.value().len;
+                self.result.GENLAB = value;
             },
             State.VARIAB => {
-                const variabValue = parseSingleLineStingleStringValue(self.input, &self.input_pos, self.default_EOL) catch unreachable;
-                std.debug.print("{s}\tinput_pos: {d}\n", .{ variabValue, self.input_pos });
+                const value = parseMultiValue([]const []const u8, self.allocator, self.input, &self.input_pos, self.default_EOL.value()) catch unreachable;
+                self.input_pos += self.default_EOL.value().len;
+                self.result.VARIAB = value;
             },
             State.VARUNIT => {
-                const varunitValue = parseSingleLineStingleStringValue(self.input, &self.input_pos, self.default_EOL) catch unreachable;
-                std.debug.print("{s}\tinput_pos: {d}\n", .{ varunitValue, self.input_pos });
+                const value = parseMultiValue([]TokenVarUnitValue, self.allocator, self.input, &self.input_pos, self.default_EOL.value()) catch unreachable;
+                self.input_pos += self.default_EOL.value().len;
+                self.result.VARUNIT = value;
             },
             State.AXISLAB => {
-                const axislabValue = parseSingleLineStingleStringValue(self.input, &self.input_pos, self.default_EOL) catch unreachable;
-                std.debug.print("{s}\tinput_pos: {d}\n", .{ axislabValue, self.input_pos });
+                const value = parseSingleValue([]const u8, self.input, &self.input_pos, self.default_EOL.value()) catch unreachable;
+                self.input_pos += self.default_EOL.value().len;
+                self.result.AXISLAB.append(value) catch unreachable;
             },
             State.AXIUNIT => {
-                const axiunitValue = parseSingleLineStingleStringValue(self.input, &self.input_pos, self.default_EOL) catch unreachable;
-                std.debug.print("{s}\tinput_pos: {d}\n", .{ axiunitValue, self.input_pos });
+                const value = parseSingleValue(TokenAxiUnitValue, self.input, &self.input_pos, self.default_EOL.value()) catch unreachable;
+                self.input_pos += self.default_EOL.value().len;
+                self.result.AXIUNIT.append(value) catch unreachable;
             },
             State.AXIMETH => {
-                const aximethValue = parseSingleLineStingleStringValue(self.input, &self.input_pos, self.default_EOL) catch unreachable;
-                std.debug.print("{s}\tinput_pos: {d}\n", .{ aximethValue, self.input_pos });
+                const value = parseSingleValue(u8, self.input, &self.input_pos, self.default_EOL.value()) catch unreachable;
+                self.input_pos += self.default_EOL.value().len;
+                self.result.AXIMETH = value;
             },
             State.AXIVAL => {
-                const axivalValue = parseSingleLineStingleStringValue(self.input, &self.input_pos, self.default_EOL) catch unreachable;
-                std.debug.print("{s}\n\tinput_pos: {d}\n", .{ axivalValue, self.input_pos });
+                const value = parseMultiValue([]f64, self.allocator, self.input, &self.input_pos, self.default_EOL.value()) catch unreachable;
+                self.input_pos += self.default_EOL.value().len;
+                self.result.AXIVAL = value;
             },
             State.MIN => {
-                const minValue = parseSingleLineStingleStringValue(self.input, &self.input_pos, self.default_EOL) catch unreachable;
-                std.debug.print("{s}\tinput_pos: {d}\n", .{ minValue, self.input_pos });
+                const value = parseSingleValue(f64, self.input, &self.input_pos, self.default_EOL.value()) catch unreachable;
+                self.input_pos += self.default_EOL.value().len;
+                self.result.MIN = value;
             },
             State.STEP => {
-                const stepValue = parseSingleLineStingleStringValue(self.input, &self.input_pos, self.default_EOL) catch unreachable;
-                std.debug.print("{s}\tinput_pos: {d}\n", .{ stepValue, self.input_pos });
+                const value = parseSingleValue(f64, self.input, &self.input_pos, self.default_EOL.value()) catch unreachable;
+                self.input_pos += self.default_EOL.value().len;
+                self.result.STEP = value;
             },
             State.NVARS => {
-                const nvarsValue = parseSingleLineStingleStringValue(self.input, &self.input_pos, self.default_EOL) catch unreachable;
-                std.debug.print("{s}\tinput_pos: {d}\n", .{ nvarsValue, self.input_pos });
+                const value = parseSingleValue(u8, self.input, &self.input_pos, self.default_EOL.value()) catch unreachable;
+                self.input_pos += self.default_EOL.value().len;
+                self.result.NVARS = value;
             },
             State.ULOADS => {
-                const uloadsValues = parseMultiLineMultiValue(self.allocator, self.input, &self.input_pos, @tagName(Token.MAXTIME)) catch unreachable;
-                std.debug.print("\n", .{});
-                for (uloadsValues, 0..) |uloadsValue, i| {
-                    std.debug.print("{s} ", .{uloadsValue});
-                    if ((i + 1) % 8 == 0) {
-                        std.debug.print("\n", .{});
-                    }
-                }
-                std.debug.print("\n", .{});
+                const value = parseMultiValue([]f64, self.allocator, self.input, &self.input_pos, @tagName(Token.MAXTIME)) catch unreachable;
+                // self.input_pos += @tagName(Token.MAXTIME).len;
+                self.result.ULOADS.append(value) catch unreachable;
             },
             State.MAXTIME => {
-                const maxtimeValue = parseSingleLineStingleStringValue(self.input, &self.input_pos, self.default_EOL) catch unreachable;
-                std.debug.print("{s}\tinput_pos: {d}\n", .{ maxtimeValue, self.input_pos });
+                const value = parseMultiValue([]f64, self.allocator, self.input, &self.input_pos, self.default_EOL.value()) catch unreachable;
+                self.input_pos += self.default_EOL.value().len;
+                self.result.MAXTIME.append(value) catch unreachable;
             },
             State.MINTIME => {
-                const mintimeValue = parseSingleLineStingleStringValue(self.input, &self.input_pos, self.default_EOL) catch unreachable;
-                std.debug.print("{s}\tinput_pos: {d}\n", .{ mintimeValue, self.input_pos });
+                const value = parseMultiValue([]f64, self.allocator, self.input, &self.input_pos, self.default_EOL.value()) catch unreachable;
+                self.input_pos += self.default_EOL.value().len;
+                self.result.MINTIME.append(value) catch unreachable;
             },
             State.MEAN => {
-                const meanValue = parseSingleLineStingleStringValue(self.input, &self.input_pos, self.default_EOL) catch unreachable;
-                std.debug.print("{s}\tinput_pos: {d}\n", .{ meanValue, self.input_pos });
+                const value = parseMultiValue([]f64, self.allocator, self.input, &self.input_pos, self.default_EOL.value()) catch unreachable;
+                self.input_pos += self.default_EOL.value().len;
+                self.result.MEAN.append(value) catch unreachable;
             },
-            State.EOF => {
-                std.debug.print("input_pos: {d}\n", .{self.input_pos});
-            },
+            State.EOF => {},
         }
 
         return zigfsm.HandlerResult.Continue;
@@ -420,20 +433,20 @@ const Parser = struct {
         const content = result.CONTENT;
         const config = result.CONFIG;
         const ndimens = result.NDIMENS;
-        // const dimens = result.DIMENS;
+        const dimens = result.DIMENS;
         const genlab = result.*.GENLAB;
-        // const variab = result.*.VARIAB;
-        // const varunit = result.*.VARUNIT;
-        // const axislab = result.*.AXISLAB;
-        // const axiunit = result.*.AXIUNIT;
-        // const aximeth = result.*.AXIMETH;
-        // const min = result.*.MIN;
-        // const step = result.*.STEP;
-        // const nvars = result.*.NVARS;
-        // const uloads = result.*.ULOADS;
-        // const maxtime = result.*.MAXTIME;
-        // const mintime = result.*.MINTIME;
-        // const mean = result.*.MEAN;
+        const variab = result.*.VARIAB;
+        const varunit = result.*.VARUNIT;
+        const axislab = result.*.AXISLAB;
+        const axiunit = result.*.AXIUNIT;
+        const aximeth = result.*.AXIMETH;
+        const min = result.*.MIN;
+        const step = result.*.STEP;
+        const nvars = result.*.NVARS;
+        const uloads = result.*.ULOADS;
+        const maxtime = result.*.MAXTIME;
+        const mintime = result.*.MINTIME;
+        const mean = result.*.MEAN;
 
         const template =
             \\ .FILE: {s}
@@ -444,20 +457,20 @@ const Parser = struct {
             \\ .CONTENT: {s}
             \\ .CONFIG: {s}
             \\ .NDIMENS: {d}
-            // \\ .DIMENS: {d}
-            \\ .GENLAB: {s}
-            // \\ .VARIAB: {s}
-            // \\ .VARUNIT: {s}
-            // \\ .AXISLAB: {s}
-            // \\ .AXIUNIT: {s}
-            // \\ .AXIMETH: {s}
-            // \\ .MIN: {d}
-            // \\ .STEP: {d}
-            // \\ .NVARS: {d}
-            // \\ .ULOADS: {s}
-            // \\ .MAXTIME: {s}
-            // \\ .MINTIME: {s}
-            // \\ .MEAN: {s}
+            \\ .DIMENS: {any}
+            \\ .GENLAB: {any}
+            \\ .VARIAB: {any}
+            \\ .VARUNIT: {any}
+            \\ .AXISLAB: {any}
+            \\ .AXIUNIT: {any}
+            \\ .AXIMETH: {any}
+            \\ .MIN: {any}
+            \\ .STEP: {any}
+            \\ .NVARS: {any}
+            \\ .ULOADS: {any}
+            \\ .MAXTIME: {any}
+            \\ .MINTIME: {any}
+            \\ .MEAN: {any}
         ;
         const r = try std.fmt.allocPrint(allocator, template, .{
             file,
@@ -468,20 +481,20 @@ const Parser = struct {
             content,
             config,
             ndimens,
-            // dimens,
+            dimens,
             genlab,
-            // variab,
-            // varunit,
-            // axislab,
-            // axiunit,
-            // aximeth,
-            // min,
-            // step,
-            // nvars,
-            // uloads,
-            // maxtime,
-            // mintime,
-            // mean,
+            variab,
+            varunit,
+            axislab,
+            axiunit,
+            aximeth,
+            min,
+            step,
+            nvars,
+            uloads,
+            maxtime,
+            mintime,
+            mean,
         });
         defer allocator.free(r);
 
@@ -496,7 +509,7 @@ test "OK" {
 
     const contents = try specs.readToEndAlloc(allocator, std.math.maxInt(usize));
     defer allocator.free(contents);
-    std.debug.print("file length: {d}\n", .{contents.len});
+    // std.debug.print("file length: {d}\n", .{contents.len});
 
     var result: Result = try Result.init(allocator);
     defer result.deinit();
@@ -504,7 +517,7 @@ test "OK" {
     var fsm = FSM.init();
     try Parser.parse(&fsm, contents, &result);
 
-    try Parser.printResult(allocator, &result);
+    // try Parser.printResult(allocator, &result);
 
     // const fileName = try result.FILE.toOwnedSlice();
     // defer allocator.free(fileName);
