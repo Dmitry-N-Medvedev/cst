@@ -35,7 +35,7 @@ pub const Token = enum {
 
 pub const TokenAccessValue = enum { D };
 pub const TokenFormValue = enum { F };
-pub const TokenAxiUnitValue = enum { L };
+pub const TokenAxiUnitValue = enum { L, T };
 pub const TokenVarUnitValue = enum { F, FL };
 
 pub const TokenAxisLabValue = enum {
