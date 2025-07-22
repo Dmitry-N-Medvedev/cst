@@ -554,7 +554,6 @@ test "multiple header files" {
     }
 
     for (header_files.items) |file_path| {
-        std.debug.print("PROCESSING {s}...", .{file_path});
         const file = try std.fs.cwd().openFile(file_path, .{ .mode = .read_only });
         defer file.close();
 
@@ -565,7 +564,7 @@ test "multiple header files" {
         defer result.deinit();
 
         var fsm = FSM.init();
+
         try Parser.parse(&fsm, contents, &result);
-        std.debug.print("DONE PROCESSING\n", .{});
     }
 }
