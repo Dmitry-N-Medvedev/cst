@@ -50,7 +50,10 @@ pub fn parseMultiValue(comptime T: type, allocator: std.mem.Allocator, input: []
             defer result.deinit();
 
             for (items.items) |value| {
-                const token = std.meta.stringToEnum(TokenVarUnitValue, value) orelse unreachable;
+                const token = std.meta.stringToEnum(TokenVarUnitValue, value) orelse {
+                    std.debug.print("unknown TokenVarUnitValue: {s}\n", .{value});
+                    unreachable;
+                };
                 result.append(token) catch unreachable;
             }
 

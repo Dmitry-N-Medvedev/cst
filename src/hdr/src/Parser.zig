@@ -502,14 +502,13 @@ const Parser = struct {
     }
 };
 
-test "OK" {
+test "single header file" {
     const allocator = std.testing.allocator;
     const specs = try std.fs.cwd().openFile("src/.data/startup.%41", .{ .mode = .read_only });
     defer specs.close();
 
     const contents = try specs.readToEndAlloc(allocator, std.math.maxInt(usize));
     defer allocator.free(contents);
-    // std.debug.print("file length: {d}\n", .{contents.len});
 
     var result: Result = try Result.init(allocator);
     defer result.deinit();
@@ -524,4 +523,49 @@ test "OK" {
 
     // try std.testing.expectEqualStrings("startup.$41", fileName);
     try std.testing.expect(true);
+}
+
+test "multiple header files" {
+    const allocator = std.testing.allocator;
+    const dir = try std.fs.cwd().openDir("../../../cst/.data/3.1_s11", .{ .iterate = true });
+    var walker = try dir.walk(allocator);
+    defer walker.deinit();
+
+    var header_files = std.ArrayList([]const u8).init(allocator);
+    defer {
+        for (header_files.items) |header_file| {
+            allocator.free(header_file);
+        }
+
+        header_files.deinit();
+    }
+
+    var file_name: []u8 = undefined;
+    while (try walker.next()) |entry| {
+        if (std.mem.indexOfScalar(u8, entry.path, '%') == null) {
+            continue;
+        }
+        const file_name_realpath = try entry.dir.realpathAlloc(allocator, entry.path);
+        defer allocator.free(file_name_realpath);
+
+        file_name = try allocator.dupe(u8, file_name_realpath);
+
+        try header_files.append(file_name);
+    }
+
+    for (header_files.items) |file_path| {
+        std.debug.print("PROCESSING {s}...", .{file_path});
+        const file = try std.fs.cwd().openFile(file_path, .{ .mode = .read_only });
+        defer file.close();
+
+        const contents = try file.readToEndAlloc(allocator, std.math.maxInt(usize));
+        defer allocator.free(contents);
+
+        var result: Result = try Result.init(allocator);
+        defer result.deinit();
+
+        var fsm = FSM.init();
+        try Parser.parse(&fsm, contents, &result);
+        std.debug.print("DONE PROCESSING\n", .{});
+    }
 }
