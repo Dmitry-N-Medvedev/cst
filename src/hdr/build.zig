@@ -26,16 +26,18 @@ pub fn build(b: *std.Build) !void {
         .name = "hdr",
         .root_module = hdr_parser_mod,
     });
-    const run_hdr_parser_cmd = b.addRunArtifact(hdr_parser);
-    const run_hdr_client_step = b.step("run_parser", "run hdr_parser");
-    run_hdr_client_step.dependOn(&run_hdr_parser_cmd.step);
-
-    if (b.args) |args| {
-        run_hdr_parser_cmd.addArgs(args);
-    }
-
-    run_hdr_parser_cmd.step.dependOn(b.getInstallStep());
     b.installArtifact(hdr_parser);
+
+    const run_hdr_parser_run = b.addRunArtifact(hdr_parser);
+    const run_hdr_client_step = b.step("run", "run hdr_parser");
+
+    run_hdr_parser_run.step.dependOn(b.getInstallStep());
+
+    const dir_arg = b.option([]const u8, "dir", "directory to process");
+    if (dir_arg) |dir| {
+        run_hdr_parser_run.addArgs(&[_][]const u8{dir});
+    }
+    run_hdr_client_step.dependOn(&run_hdr_parser_run.step);
 
     // DEBUG
     const composed_root_specs_file_name = try composeRootTestFileName(b.allocator, hdr_parser_root_file);
