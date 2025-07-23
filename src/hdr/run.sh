@@ -5,6 +5,8 @@ zig build -Doptimize=ReleaseFast
 
 /usr/bin/time /bin/bash -c '
 {
+  set -euo pipefail
+
   for dir in /Users/dmitrymedvedev/projects/cst/.data/part000000/*/; do
     if [ -d "$dir" ]; then
       zig-out/bin/hdr --dir "$dir"
