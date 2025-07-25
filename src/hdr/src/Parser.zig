@@ -260,11 +260,11 @@ pub const Parser = struct {
         _ = try self.fsm.do(Event.SIG_EOF);
     }
 
-    fn resolveKey(input: []const u8, pos: *usize) ?Token {
+    pub fn resolveKey(input: []const u8, pos: *usize) ?Token {
         const rel_space_pos = std.mem.indexOfAny(u8, input[pos.*..], Whitespace) orelse unreachable;
 
         if (rel_space_pos == 0) {
-            std.debug.print("ERR: .resolveKey::unreachable: {d} {s}\n", .{ pos.*, input[pos.*..] });
+            std.debug.print("ERR: .resolveKey::unreachable: {d} '{s}'\n", .{ pos.*, input[pos.*..] });
             unreachable;
         }
         const abs_space_pos = pos.* + rel_space_pos;
@@ -420,83 +420,6 @@ pub const Parser = struct {
 
         return zigfsm.HandlerResult.Continue;
     }
-
-    fn printResult(allocator: std.mem.Allocator, result: *Result) !void {
-        const file = if (result.FILE.items.len > 0) result.FILE.items else "N/A";
-        const access = @tagName(result.ACCESS);
-        const form = @tagName(result.FORM);
-        const recl = [1]u8{result.RECL orelse ' '};
-        const format = result.FORMAT;
-        const content = result.CONTENT;
-        const config = result.CONFIG;
-        const ndimens = result.NDIMENS;
-        const dimens = result.DIMENS;
-        const genlab = result.*.GENLAB;
-        const variab = result.*.VARIAB;
-        const varunit = result.*.VARUNIT;
-        const axislab = result.*.AXISLAB;
-        const axiunit = result.*.AXIUNIT;
-        const aximeth = result.*.AXIMETH;
-        const min = result.*.MIN;
-        const step = result.*.STEP;
-        const nvars = result.*.NVARS;
-        const uloads = result.*.ULOADS;
-        const maxtime = result.*.MAXTIME;
-        const mintime = result.*.MINTIME;
-        const mean = result.*.MEAN;
-
-        const template =
-            \\ .FILE: {s}
-            \\ .ACCESS: {s}
-            \\ .FORM: {s}
-            \\ .RECL: {s}
-            \\ .FORMAT: {s}
-            \\ .CONTENT: {s}
-            \\ .CONFIG: {s}
-            \\ .NDIMENS: {d}
-            \\ .DIMENS: {any}
-            \\ .GENLAB: {any}
-            \\ .VARIAB: {any}
-            \\ .VARUNIT: {any}
-            \\ .AXISLAB: {any}
-            \\ .AXIUNIT: {any}
-            \\ .AXIMETH: {any}
-            \\ .MIN: {any}
-            \\ .STEP: {any}
-            \\ .NVARS: {any}
-            \\ .ULOADS: {any}
-            \\ .MAXTIME: {any}
-            \\ .MINTIME: {any}
-            \\ .MEAN: {any}
-        ;
-        const r = try std.fmt.allocPrint(allocator, template, .{
-            file,
-            access,
-            form,
-            recl,
-            format,
-            content,
-            config,
-            ndimens,
-            dimens,
-            genlab,
-            variab,
-            varunit,
-            axislab,
-            axiunit,
-            aximeth,
-            min,
-            step,
-            nvars,
-            uloads,
-            maxtime,
-            mintime,
-            mean,
-        });
-        defer allocator.free(r);
-
-        std.debug.print("\nRESULT:\n{s}\n\n", .{r});
-    }
 };
 
 test "single header file" {
@@ -522,146 +445,95 @@ test "single header file" {
     try std.testing.expect(true);
 }
 
-pub const std_options = struct {
-    pub const logFN = log;
-
-    pub fn log(
-        comptime level: std.log.Level,
-        comptime scope: @TypeOf(.enum_literal),
-        comptime format: []const u8,
-        args: anytype,
-    ) void {
-        _ = level;
-        _ = scope;
-
-        const std_out_file = std.io.getStdOut();
-        var buffered_writer = std.io.bufferedWriter(std_out_file.writer());
-        const stdout = buffered_writer.writer();
-
-        stdout.print(format, args) catch return;
-        buffered_writer.flush() catch return;
-    }
-};
-
-test "1.5G of header files" {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    var allocator = gpa.allocator();
-    defer {
-        const leaked = gpa.deinit();
-        const leaked_message = switch (leaked) {
-            .leak => "leaked",
-            .ok => "no leaks",
-        };
-        std.log.info("GPA leak report: {s}\n", .{leaked_message});
-
-        _ = std.testing.expect(leaked == .ok) catch {};
-    }
-    const max_file_size = 1 * 1024 * 1024;
-    const data_root_path = "../../../cst/.data/part000000";
-
-    var sub_dir_paths = std.ArrayList([]const u8).init(allocator);
-    defer {
-        for (sub_dir_paths.items) |path| {
-            allocator.free(path);
-        }
-
-        sub_dir_paths.deinit();
-    }
-
-    {
-        var data_root_dir = try std.fs.cwd().openDir(data_root_path, .{ .iterate = true });
-        defer data_root_dir.close();
-
-        var walker = try data_root_dir.walk(allocator);
-        defer walker.deinit();
-
-        const root_path = try std.fs.cwd().realpathAlloc(allocator, data_root_path);
-        defer allocator.free(root_path);
-
-        var sub_dir_full_path: []const u8 = undefined;
-        while (try walker.next()) |entry| {
-            if (entry.kind != .directory) {
-                continue;
-            }
-
-            sub_dir_full_path = try std.fs.path.join(allocator, &[_][]const u8{ root_path, entry.path });
-            try sub_dir_paths.append(sub_dir_full_path);
-        }
-    }
-
-    var file_paths = std.ArrayList([]const u8).init(allocator);
-    defer {
-        for (file_paths.items) |file_path| {
-            allocator.free(file_path);
-        }
-
-        file_paths.deinit();
-    }
-
-    for (sub_dir_paths.items) |sub_dir_path| {
-        var sub_dir = try std.fs.cwd().openDir(sub_dir_path, .{ .iterate = true });
-        defer sub_dir.close();
-
-        var walker = try sub_dir.walk(allocator);
-        defer walker.deinit();
-
-        while (try walker.next()) |entry| {
-            if (entry.kind != .file) {
-                unreachable;
-            }
-
-            const hdr_file_full_path = try std.fs.path.join(allocator, &[_][]const u8{ sub_dir_path, entry.path });
-            defer allocator.free(hdr_file_full_path);
-            //
-            const hdr_file = try std.fs.cwd().openFile(hdr_file_full_path, .{ .mode = .read_only });
-            defer hdr_file.close();
-            //
-            const hdr_contents = try hdr_file.readToEndAlloc(allocator, max_file_size);
-            defer allocator.free(hdr_contents);
-            //
-            var result: Result = try Result.init(allocator);
-            defer result.deinit();
-            //
-            var fsm = FSM.init();
-            const started_at_ns = std.time.nanoTimestamp();
-            try Parser.parse(&fsm, hdr_contents, &result);
-            const duration_ns = std.time.nanoTimestamp() - started_at_ns;
-            std.debug.print("\t\tDURATION: {d} ns\n\n", .{duration_ns});
-
-            // fsm.restart();
-            // std.debug.print("\tfsm.restart", .{});
-        }
-    }
-
-    // std.debug.print("num of files: {d}\n", .{sub_dir_paths.items.len});
-    //
-    // var fsm = FSM.init();
-    // for (sub_dir_paths.items) |file_path| {
-    //     std.debug.print("processing {s}\n", .{file_path});
-    //
-    //     const hdr_file = try std.fs.cwd().openFile(file_path, .{ .mode = .read_only });
-    //     defer hdr_file.close();
-    //
-    //     std.debug.print("\tSTARTING\n", .{});
-    //
-    //     const hdr_contents = try hdr_file.readToEndAlloc(allocator, max_file_size);
-    //     defer allocator.free(hdr_contents);
-    //
-    //     std.debug.print("\tread\n", .{});
-    //
-    //     var result: Result = try Result.init(allocator);
-    //     defer result.deinit();
-    //
-    //     std.debug.print("\tResult.init\n", .{});
-    //
-    //     std.debug.print("\tFSM.init\n", .{});
-    //
-    //     try Parser.parse(&fsm, hdr_contents, &result);
-    //
-    //     fsm.restart();
-    //
-    //     std.debug.print("\tDONE\n", .{});
-    // }
-
-    try std.testing.expect(true);
-}
+// test "1.5G of header files" {
+//     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+//     var allocator = gpa.allocator();
+//     defer {
+//         const leaked = gpa.deinit();
+//         const leaked_message = switch (leaked) {
+//             .leak => "leaked",
+//             .ok => "no leaks",
+//         };
+//         std.log.info("GPA leak report: {s}\n", .{leaked_message});
+//
+//         _ = std.testing.expect(leaked == .ok) catch {};
+//     }
+//     const max_file_size = 1 * 1024 * 1024;
+//     const data_root_path = "../../../cst/.data/part000000";
+//
+//     var sub_dir_paths = std.ArrayList([]const u8).init(allocator);
+//     defer {
+//         for (sub_dir_paths.items) |path| {
+//             allocator.free(path);
+//         }
+//
+//         sub_dir_paths.deinit();
+//     }
+//
+//     {
+//         var data_root_dir = try std.fs.cwd().openDir(data_root_path, .{ .iterate = true });
+//         defer data_root_dir.close();
+//
+//         var walker = try data_root_dir.walk(allocator);
+//         defer walker.deinit();
+//
+//         const root_path = try std.fs.cwd().realpathAlloc(allocator, data_root_path);
+//         defer allocator.free(root_path);
+//
+//         var sub_dir_full_path: []const u8 = undefined;
+//         while (try walker.next()) |entry| {
+//             if (entry.kind != .directory) {
+//                 continue;
+//             }
+//
+//             sub_dir_full_path = try std.fs.path.join(allocator, &[_][]const u8{ root_path, entry.path });
+//             try sub_dir_paths.append(sub_dir_full_path);
+//         }
+//     }
+//
+//     var file_paths = std.ArrayList([]const u8).init(allocator);
+//     defer {
+//         for (file_paths.items) |file_path| {
+//             allocator.free(file_path);
+//         }
+//
+//         file_paths.deinit();
+//     }
+//
+//     for (sub_dir_paths.items) |sub_dir_path| {
+//         var sub_dir = try std.fs.cwd().openDir(sub_dir_path, .{ .iterate = true });
+//         defer sub_dir.close();
+//
+//         var walker = try sub_dir.walk(allocator);
+//         defer walker.deinit();
+//
+//         while (try walker.next()) |entry| {
+//             if (entry.kind != .file) {
+//                 unreachable;
+//             }
+//
+//             const hdr_file_full_path = try std.fs.path.join(allocator, &[_][]const u8{ sub_dir_path, entry.path });
+//             defer allocator.free(hdr_file_full_path);
+//             //
+//             const hdr_file = try std.fs.cwd().openFile(hdr_file_full_path, .{ .mode = .read_only });
+//             defer hdr_file.close();
+//             //
+//             const hdr_contents = try hdr_file.readToEndAlloc(allocator, max_file_size);
+//             defer allocator.free(hdr_contents);
+//             //
+//             var result: Result = try Result.init(allocator);
+//             defer result.deinit();
+//             //
+//             var fsm = FSM.init();
+//             const started_at_ns = std.time.nanoTimestamp();
+//             try Parser.parse(&fsm, hdr_contents, &result);
+//             const duration_ns = std.time.nanoTimestamp() - started_at_ns;
+//             std.debug.print("\t\tDURATION: {d} ns\n\n", .{duration_ns});
+//
+//             // fsm.restart();
+//             // std.debug.print("\tfsm.restart", .{});
+//         }
+//     }
+//
+//     try std.testing.expect(true);
+// }

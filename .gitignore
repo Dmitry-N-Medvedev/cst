@@ -4,4 +4,4 @@ zig-out/
 *.o
 .DS_Store
 .*
-
+src/hdr/src/specs/aggregated
