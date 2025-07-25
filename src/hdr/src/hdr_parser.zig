@@ -67,5 +67,34 @@ pub fn main() !void {
 
         var fsm = FSM.init();
         try Parser.parse(&fsm, hdr_contents, &result);
+
+        // printResult(result, hdr_file_full_path);
     }
 }
+
+// fn printResult(result: Result, hdr_file_full_path: []const u8) void {
+//     std.debug.print("\n{s}\n", .{hdr_file_full_path});
+//
+//     std.debug.print("\tFILE:\t{s}\n", .{result.FILE.items});
+//     std.debug.print("\tACCESS:\t{s}\n", .{@tagName(result.ACCESS)});
+//     std.debug.print("\tFORM:\t{s}\n", .{@tagName(result.FORM)});
+//     std.debug.print("\tRECL:\t{d}\n", .{result.RECL.?});
+//     std.debug.print("\tFORMAT:\t{s}\n", .{result.FORMAT});
+//     std.debug.print("\tCONTENT:\t{s}\n", .{result.CONTENT});
+//     std.debug.print("\tCONFIG:\t{s}\n", .{result.CONFIG});
+//     std.debug.print("\tNDIMENS:\t{d}\n", .{result.NDIMENS});
+//     std.debug.print("\tDIMENS:\t{any}\n", .{result.DIMENS});
+//     std.debug.print("\tGENLAB:\t{s}\n", .{result.GENLAB});
+//
+//     std.debug.print("\tVARIAB:\t ", .{});
+//     for (result.VARIAB) |variab| {
+//         std.debug.print("{s} ", .{variab});
+//     }
+//
+//     std.debug.print("\tVARUNIT:\t ", .{});
+//     for (result.VARUNIT) |varunit| {
+//         std.debug.print("{s} ", .{@tagName(varunit)});
+//     }
+//
+//     std.debug.print("\n", .{});
+// }
